@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: celo-mcp
+    runtime: node
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run start:http
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: CELO_NETWORK
+        value: sepolia
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: WALLET_ENCRYPTION_PRIVATE_KEY
+        sync: false
