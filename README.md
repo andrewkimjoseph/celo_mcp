@@ -2,7 +2,7 @@
 
 Open-source [Model Context Protocol](https://modelcontextprotocol.io) server that gives LLMs read + write access to Celo — balances, sends, swaps (quote stub), and chain reads.
 
-## Quick start
+## Quick start (local)
 
 ```bash
 npm install
@@ -10,9 +10,42 @@ npm run build
 npm start
 ```
 
+## Deploy to Render
+
+This project includes a [Render Blueprint](render.yaml) for one-click deployment as a public Streamable HTTP MCP server.
+
+### 1. Generate an RSA key pair
+
+```bash
+openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -pubout -in private.pem -out public.pem
+```
+
+### 2. Deploy
+
+1. Push this repo to GitHub
+2. Render Dashboard → **New → Blueprint** → connect the repo
+3. Set `WALLET_ENCRYPTION_PRIVATE_KEY` in the Render Environment tab (paste contents of `private.pem`)
+4. Your MCP endpoint will be at `https://<service-name>.onrender.com/mcp`
+
+> **Note:** Free Render services spin down after ~15 minutes of inactivity. Cold starts can take 30–60 seconds and may cause MCP client timeouts. Use a Starter plan for always-on hosting.
+
 ## Cursor / Claude Desktop config
 
-Add to your MCP settings (`.cursor/mcp.json` or Claude Desktop config):
+### Remote (Render — recommended for hackathon)
+
+```json
+{
+  "mcpServers": {
+    "celo": {
+      "type": "streamable-http",
+      "url": "https://your-service-name.onrender.com/mcp"
+    }
+  }
+}
+```
+
+### Local stdio
 
 ```json
 {
@@ -28,7 +61,7 @@ Add to your MCP settings (`.cursor/mcp.json` or Claude Desktop config):
 }
 ```
 
-For write tools (`send_token`, `estimate_send`), add a funded wallet:
+For local write tools, add a funded wallet:
 
 ```json
 "env": {
@@ -39,6 +72,26 @@ For write tools (`send_token`, `estimate_send`), add a funded wallet:
 
 Never commit private keys. Use env vars only.
 
+## Write tools (hosted mode)
+
+Write tools (`send_token`, `estimate_send`) accept an RSA-encrypted private key per request — never plaintext.
+
+### Flow
+
+1. Fetch the server's public key:
+   - MCP tool: `get_wallet_encryption_public_key`
+   - HTTP: `GET https://your-service.onrender.com/public-key`
+2. Encrypt your key locally:
+
+```bash
+npm run encrypt-key -- --url https://your-service-name.onrender.com --key 0xYOUR_PRIVATE_KEY
+```
+
+3. Give the agent the encrypted blob (base64 output) along with your transaction details
+4. The agent calls `send_token` with the `encryptedPrivateKey` parameter
+
+Use testnet keys only for demos. The server decrypts the key ephemerally to sign the transaction — it is not stored.
+
 ## Environment variables
 
 | Variable | Default | Description |
@@ -46,7 +99,9 @@ Never commit private keys. Use env vars only.
 | `CELO_NETWORK` | `mainnet` | `mainnet` or `sepolia` |
 | `CELO_RPC_URL_MAINNET` | Forno public RPC | Override mainnet RPC |
 | `CELO_RPC_URL_SEPOLIA` | Forno Sepolia RPC | Override testnet RPC |
-| `CELO_PRIVATE_KEY` | — | Enables write tools |
+| `CELO_PRIVATE_KEY` | — | Local stdio write tools only |
+| `WALLET_ENCRYPTION_PRIVATE_KEY` | — | RSA private key PEM for HTTP write tools |
+| `PORT` | `10000` | HTTP server port (set by Render) |
 
 Copy `.env.example` to `.env` for local development.
 
@@ -61,7 +116,8 @@ Copy `.env.example` to `.env` for local development.
 | `get_account` | read | CELO balance, nonce |
 | `get_celo_balances` | read | CELO + ERC-20 balances |
 | `get_token_info` | read | Token metadata |
-| `estimate_send` | read* | Gas estimate (*needs wallet) |
+| `get_wallet_encryption_public_key` | read | RSA public key for encrypting private keys |
+| `estimate_send` | read* | Gas estimate (*needs encrypted or env key) |
 | `send_token` | write | Send CELO or ERC-20 |
 | `get_swap_quote` | read | Swap preview (routing stub) |
 
@@ -97,8 +153,10 @@ No changes to `src/index.ts` or server bootstrap required.
 ## Development
 
 ```bash
-npm run dev      # watch TypeScript
-npm run inspect  # MCP Inspector UI
+npm run dev          # watch TypeScript
+npm run inspect      # MCP Inspector UI (stdio)
+npm run start:http   # HTTP server on PORT (default 10000)
+npm run encrypt-key  # encrypt a private key for write tools
 ```
 
 ## License
