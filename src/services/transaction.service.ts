@@ -1,6 +1,7 @@
 import { encodeFunctionData, erc20Abi, parseEther } from "viem";
 import type { CeloNetwork } from "../config/env.js";
-import type { CeloClientFactory } from "../clients/celo-client.js";
+import type { CeloClientFactory, CeloClients } from "../clients/celo-client.js";
+import { decryptPrivateKey } from "../crypto/wallet-key-crypto.js";
 import { TokenService } from "./token.service.js";
 
 export class TransactionService {
@@ -13,13 +14,23 @@ export class TransactionService {
     this.tokenService = new TokenService(clientFactory);
   }
 
-  requireWallet(): `0x${string}` {
-    if (!this.walletAddress) {
+  private resolveClients(
+    network: CeloNetwork,
+    encryptedPrivateKey?: string,
+  ): CeloClients {
+    if (encryptedPrivateKey) {
+      const privateKey = decryptPrivateKey(encryptedPrivateKey);
+      return this.clientFactory.getClientsForAccount(network, privateKey);
+    }
+
+    const clients = this.clientFactory.getClients(network);
+    if (!clients.wallet || !clients.accountAddress) {
       throw new Error(
-        "No wallet configured. Set CELO_PRIVATE_KEY to enable write tools.",
+        "No wallet configured. Provide encryptedPrivateKey (encrypt with get_wallet_encryption_public_key) or set CELO_PRIVATE_KEY for local mode.",
       );
     }
-    return this.walletAddress;
+
+    return clients;
   }
 
   async estimateSend(
@@ -27,9 +38,17 @@ export class TransactionService {
     to: `0x${string}`,
     token: string,
     amount: string,
+    encryptedPrivateKey?: string,
   ) {
-    const from = this.requireWallet();
-    const { public: client } = this.clientFactory.getClients(network);
+    const { public: client, accountAddress: from } = this.resolveClients(
+      network,
+      encryptedPrivateKey,
+    );
+
+    if (!from) {
+      throw new Error("Wallet address unavailable.");
+    }
+
     const resolved = this.tokenService.resolveToken(network, token);
 
     if (resolved.address === "native") {
@@ -78,13 +97,16 @@ export class TransactionService {
     to: `0x${string}`,
     token: string,
     amount: string,
+    encryptedPrivateKey?: string,
   ) {
-    const from = this.requireWallet();
-    const { public: client, wallet } = this.clientFactory.getClients(network);
+    const { public: client, wallet, accountAddress: from } = this.resolveClients(
+      network,
+      encryptedPrivateKey,
+    );
 
-    if (!wallet) {
+    if (!wallet || !from) {
       throw new Error(
-        "Wallet client unavailable. Set CELO_PRIVATE_KEY to send transactions.",
+        "Wallet client unavailable. Provide encryptedPrivateKey or set CELO_PRIVATE_KEY.",
       );
     }
 
