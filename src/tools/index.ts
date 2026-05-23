@@ -4,11 +4,13 @@ import type { ToolModule } from "./types.js";
 import { accountTools, blockchainTools } from "./blockchain.tools.js";
 import { tokenTools } from "./token.tools.js";
 import { transactionTools } from "./transaction.tools.js";
+import { walletTools } from "./wallet.tools.js";
 
 export const toolModules: ToolModule[] = [
   blockchainTools,
   accountTools,
   tokenTools,
+  walletTools,
   transactionTools,
 ];
 
