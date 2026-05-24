@@ -1,6 +1,9 @@
 import { erc20Abi, formatUnits, isAddress, parseUnits } from "viem";
-import { KNOWN_TOKENS } from "../config/chains.js";
-import { resolveStablecoins } from "../config/stablecoins.js";
+import {
+  findKnownToken,
+  KNOWN_TOKEN_SYMBOLS,
+  resolveStablecoins,
+} from "../config/chains.js";
 import type { CeloClientFactory } from "../clients/celo-client.js";
 
 export interface ResolvedToken {
@@ -14,15 +17,14 @@ export class TokenService {
 
   resolveToken(token: string): ResolvedToken {
     const normalized = token.trim();
-    const upper = normalized.toUpperCase();
 
-    if (upper === "CELO" || upper === "NATIVE") {
-      return { address: "native", symbol: "CELO", decimals: 18 };
-    }
-
-    const known = KNOWN_TOKENS[upper];
+    const known = findKnownToken(normalized);
     if (known) {
-      return known;
+      return {
+        address: known.address,
+        symbol: known.symbol,
+        decimals: known.decimals,
+      };
     }
 
     if (isAddress(normalized)) {
@@ -34,7 +36,7 @@ export class TokenService {
     }
 
     throw new Error(
-      `Unknown token "${token}". Use CELO, cUSD, cEUR, cREAL, or a contract address.`,
+      `Unknown token "${token}". Use ${KNOWN_TOKEN_SYMBOLS.join(", ")}, or a contract address.`,
     );
   }
 
@@ -81,7 +83,7 @@ export class TokenService {
 
   async getBalances(
     address: `0x${string}`,
-    tokens: string[] = ["CELO", "cUSD"],
+    tokens: string[] = ["CELO", "USDm"],
   ) {
     const { public: client } = this.clientFactory.getClients();
 

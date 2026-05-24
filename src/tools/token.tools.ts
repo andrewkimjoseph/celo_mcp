@@ -12,7 +12,7 @@ export const tokenTools: ToolModule = {
       {
         title: "Get Celo Balances",
         description:
-          "Returns native CELO and ERC-20 balances for an address on mainnet. Defaults to CELO + cUSD.",
+          "Returns native CELO and ERC-20 balances for an address on mainnet. Defaults to CELO + USDm.",
         inputSchema: z.object({
           address: addressSchema,
           tokens: z.array(tokenSymbolSchema).optional(),
