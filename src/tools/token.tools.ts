@@ -2,12 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { AppContext } from "../context/app-context.js";
 import type { ToolModule } from "./types.js";
-import {
-  addressSchema,
-  networkSchema,
-  resolveNetwork,
-  tokenSymbolSchema,
-} from "../schemas/common.js";
+import { addressSchema, tokenSymbolSchema } from "../schemas/common.js";
 import { err, ok } from "./helpers.js";
 
 export const tokenTools: ToolModule = {
@@ -17,22 +12,54 @@ export const tokenTools: ToolModule = {
       {
         title: "Get Celo Balances",
         description:
-          "Returns native CELO and ERC-20 balances for an address. Defaults to CELO + cUSD.",
+          "Returns native CELO and ERC-20 balances for an address on mainnet. Defaults to CELO + cUSD.",
         inputSchema: z.object({
           address: addressSchema,
           tokens: z.array(tokenSymbolSchema).optional(),
-          network: networkSchema.optional(),
         }),
         annotations: { readOnlyHint: true, idempotentHint: true },
       },
-      async ({ address, tokens, network }) => {
+      async ({ address, tokens }) => {
         try {
-          const resolved = resolveNetwork(network, ctx.config.defaultNetwork);
           return ok(
             await ctx.token.getBalances(
-              resolved,
               address as `0x${string}`,
               tokens,
+            ),
+          );
+        } catch (error) {
+          return err(error instanceof Error ? error.message : String(error));
+        }
+      },
+    );
+
+    server.registerTool(
+      "get_stablecoin_balances",
+      {
+        title: "Get Stablecoin Balances",
+        description:
+          "Returns balances for Celo mainnet local stablecoins (Mento, USDC, USDT, etc.). Checks all stablecoins by default and omits zero balances.",
+        inputSchema: z.object({
+          address: addressSchema,
+          stablecoins: z
+            .array(z.string())
+            .optional()
+            .describe(
+              "Stablecoin symbols to check (e.g. USDm, USDC). Defaults to all mainnet stablecoins.",
+            ),
+          includeZero: z
+            .boolean()
+            .optional()
+            .describe("Include stablecoins with zero balance"),
+        }),
+        annotations: { readOnlyHint: true, idempotentHint: true },
+      },
+      async ({ address, stablecoins, includeZero }) => {
+        try {
+          return ok(
+            await ctx.token.getStablecoinBalances(
+              address as `0x${string}`,
+              { stablecoins, includeZero },
             ),
           );
         } catch (error) {
@@ -45,17 +72,15 @@ export const tokenTools: ToolModule = {
       "get_token_info",
       {
         title: "Get Token Info",
-        description: "Returns metadata for a known or custom ERC-20 token.",
+        description: "Returns metadata for a known or custom ERC-20 token on mainnet.",
         inputSchema: z.object({
           token: tokenSymbolSchema,
-          network: networkSchema.optional(),
         }),
         annotations: { readOnlyHint: true, idempotentHint: true },
       },
-      async ({ token, network }) => {
+      async ({ token }) => {
         try {
-          const resolved = resolveNetwork(network, ctx.config.defaultNetwork);
-          return ok(await ctx.token.getTokenInfo(resolved, token));
+          return ok(await ctx.token.getTokenInfo(token));
         } catch (error) {
           return err(error instanceof Error ? error.message : String(error));
         }

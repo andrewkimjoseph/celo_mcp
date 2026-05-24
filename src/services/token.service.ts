@@ -1,6 +1,6 @@
 import { erc20Abi, formatUnits, isAddress, parseUnits } from "viem";
-import type { CeloNetwork } from "../config/env.js";
 import { KNOWN_TOKENS } from "../config/chains.js";
+import { resolveStablecoins } from "../config/stablecoins.js";
 import type { CeloClientFactory } from "../clients/celo-client.js";
 
 export interface ResolvedToken {
@@ -12,7 +12,7 @@ export interface ResolvedToken {
 export class TokenService {
   constructor(private readonly clientFactory: CeloClientFactory) {}
 
-  resolveToken(network: CeloNetwork, token: string): ResolvedToken {
+  resolveToken(token: string): ResolvedToken {
     const normalized = token.trim();
     const upper = normalized.toUpperCase();
 
@@ -20,7 +20,7 @@ export class TokenService {
       return { address: "native", symbol: "CELO", decimals: 18 };
     }
 
-    const known = KNOWN_TOKENS[network][upper];
+    const known = KNOWN_TOKENS[upper];
     if (known) {
       return known;
     }
@@ -38,18 +38,18 @@ export class TokenService {
     );
   }
 
-  async getTokenInfo(network: CeloNetwork, token: string) {
-    const resolved = this.resolveToken(network, token);
+  async getTokenInfo(token: string) {
+    const resolved = this.resolveToken(token);
 
     if (resolved.address === "native") {
       return {
         ...resolved,
-        network,
+        network: "mainnet",
         name: "Celo",
       };
     }
 
-    const { public: client } = this.clientFactory.getClients(network);
+    const { public: client } = this.clientFactory.getClients();
     const address = resolved.address;
 
     const [name, symbol, decimals] = await Promise.all([
@@ -71,7 +71,7 @@ export class TokenService {
     ]);
 
     return {
-      network,
+      network: "mainnet",
       address,
       name,
       symbol,
@@ -80,15 +80,14 @@ export class TokenService {
   }
 
   async getBalances(
-    network: CeloNetwork,
     address: `0x${string}`,
     tokens: string[] = ["CELO", "cUSD"],
   ) {
-    const { public: client } = this.clientFactory.getClients(network);
+    const { public: client } = this.clientFactory.getClients();
 
     const balances = await Promise.all(
       tokens.map(async (tokenInput) => {
-        const token = this.resolveToken(network, tokenInput);
+        const token = this.resolveToken(tokenInput);
 
         if (token.address === "native") {
           const balance = await client.getBalance({ address });
@@ -127,7 +126,65 @@ export class TokenService {
       }),
     );
 
-    return { network, address, balances };
+    return { network: "mainnet", address, balances };
+  }
+
+  async getStablecoinBalances(
+    address: `0x${string}`,
+    options?: {
+      stablecoins?: string[];
+      includeZero?: boolean;
+    },
+  ) {
+    const coins = resolveStablecoins(options?.stablecoins);
+    const { public: client } = this.clientFactory.getClients();
+
+    const results = await client.multicall({
+      contracts: coins.map((coin) => ({
+        address: coin.address,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [address],
+      })),
+      allowFailure: true,
+    });
+
+    const balances = coins.map((coin, index) => {
+      const result = results[index];
+
+      if (result.status === "failure") {
+        return {
+          symbol: coin.symbol,
+          address: coin.address,
+          issuer: coin.issuer,
+          useCase: coin.useCase,
+          raw: "0",
+          formatted: "0",
+          readError: true,
+        };
+      }
+
+      const raw = result.result as bigint;
+      return {
+        symbol: coin.symbol,
+        address: coin.address,
+        issuer: coin.issuer,
+        useCase: coin.useCase,
+        raw: raw.toString(),
+        formatted: formatUnits(raw, coin.decimals),
+      };
+    });
+
+    const stablecoins = options?.includeZero
+      ? balances
+      : balances.filter((balance) => balance.raw !== "0");
+
+    return {
+      network: "mainnet",
+      address,
+      totalChecked: coins.length,
+      stablecoins,
+    };
   }
 
   parseAmount(amount: string, decimals: number): bigint {
