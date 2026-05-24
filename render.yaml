@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: celo-mcp
+    name: celina
     runtime: node
     plan: free
     buildCommand: npm install --include=dev && npm run build
