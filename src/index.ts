@@ -6,7 +6,7 @@ async function main(): Promise<void> {
   const server = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("celo-mcp running on stdio");
+  console.error("Celina running on stdio");
 }
 
 main().catch((error) => {
