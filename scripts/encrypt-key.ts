@@ -26,15 +26,15 @@ function parseArgs(argv: string[]) {
 function printUsage() {
   console.log(`Usage: encrypt-key [options]
 
-Encrypt a Celo private key with the server's RSA public key.
+Encrypt a private key for Celina with the server's RSA public key.
 
 Options:
-  --url <url>                 Fetch public key from server (e.g. https://celo-mcp.onrender.com)
+  --url <url>                 Fetch public key from server (e.g. https://celina.onrender.com)
   --public-key-file <path>    Use a local PEM public key file instead of --url
   --key <0x...>                Private key to encrypt (required)
 
 Examples:
-  npm run encrypt-key -- --url https://celo-mcp.onrender.com --key 0xabc...
+  npm run encrypt-key -- --url https://celina.onrender.com --key 0xabc...
   npm run encrypt-key -- --public-key-file ./public.pem --key 0xabc...
 `);
 }
