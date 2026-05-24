@@ -1,6 +1,6 @@
 # Celina — Celo MCP Server
 
-**Celina** is an open-source [Model Context Protocol](https://modelcontextprotocol.io) server that gives LLMs read + write access to **Celo mainnet** — balances, stablecoins, sends, swaps (quote stub), and chain reads.
+**Celina** is an open-source [Model Context Protocol](https://modelcontextprotocol.io) server that gives LLMs read + write access to **Celo mainnet** — balances, stablecoins, sends, and chain reads.
 
 Website: [celina.andrewkimjoseph.com](https://celina.andrewkimjoseph.com)
 
@@ -52,25 +52,6 @@ openssl rsa -pubout -in private.pem -out public.pem
 ## Cursor / Claude Desktop config
 
 ### Remote (recommended)
-
-```json
-{
-  "mcpServers": {
-    "celina": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://mcp.celina.andrewkimjoseph.com/mcp",
-        "--transport",
-        "http-only"
-      ]
-    }
-  }
-}
-```
-
-Or with streamable HTTP directly:
 
 ```json
 {
@@ -184,7 +165,6 @@ Token symbols are resolved case-insensitively. Legacy aliases `cUSD` and `cEUR` 
 | `get_wallet_encryption_public_key` | read | RSA public key for encrypting private keys |
 | `estimate_send` | read* | Gas estimate (*needs encrypted or env key) |
 | `send_token` | write | Send CELO or ERC-20 |
-| `get_swap_quote` | read | Swap preview (routing stub) |
 
 ## Adding a new tool
 

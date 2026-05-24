@@ -151,21 +151,4 @@ export class TransactionService {
       amount,
     };
   }
-
-  async getSwapQuote(fromToken: string, toToken: string, amount: string) {
-    const from = this.tokenService.resolveToken(fromToken);
-    const to = this.tokenService.resolveToken(toToken);
-
-    return {
-      network: "mainnet",
-      status: "not_implemented",
-      message:
-        "On-chain swap routing (Mento/Uniswap) is not wired yet. Use this tool to validate token pairs before execute_swap ships.",
-      fromToken: from.symbol,
-      toToken: to.symbol,
-      amount,
-      nextStep:
-        "Add a SwapService with Mento broker/router quotes, then implement execute_swap.",
-    };
-  }
 }

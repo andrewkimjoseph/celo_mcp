@@ -76,29 +76,5 @@ export const transactionTools: ToolModule = {
         }
       },
     );
-
-    server.registerTool(
-      "get_swap_quote",
-      {
-        title: "Get Swap Quote",
-        description:
-          "Preview a token swap on Celo mainnet. Routing integration is stubbed for v0.1.",
-        inputSchema: z.object({
-          fromToken: tokenSymbolSchema,
-          toToken: tokenSymbolSchema,
-          amount: z.string(),
-        }),
-        annotations: { readOnlyHint: true },
-      },
-      async ({ fromToken, toToken, amount }) => {
-        try {
-          return ok(
-            await ctx.transaction.getSwapQuote(fromToken, toToken, amount),
-          );
-        } catch (error) {
-          return err(error instanceof Error ? error.message : String(error));
-        }
-      },
-    );
   },
 };
