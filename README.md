@@ -1,6 +1,6 @@
 # Celo MCP
 
-Open-source [Model Context Protocol](https://modelcontextprotocol.io) server that gives LLMs read + write access to Celo — balances, sends, swaps (quote stub), and chain reads.
+Open-source [Model Context Protocol](https://modelcontextprotocol.io) server that gives LLMs read + write access to **Celo mainnet** — balances, stablecoins, sends, swaps (quote stub), and chain reads.
 
 ## Quick start (local)
 
@@ -52,20 +52,16 @@ openssl rsa -pubout -in private.pem -out public.pem
   "mcpServers": {
     "celo": {
       "command": "node",
-      "args": ["/absolute/path/to/celo_mcp/build/index.js"],
-      "env": {
-        "CELO_NETWORK": "mainnet"
-      }
+      "args": ["/absolute/path/to/celo_mcp/build/index.js"]
     }
   }
 }
 ```
 
-For local write tools, add a funded wallet:
+For local write tools, add a funded mainnet wallet:
 
 ```json
 "env": {
-  "CELO_NETWORK": "sepolia",
   "CELO_PRIVATE_KEY": "0x..."
 }
 ```
@@ -90,15 +86,13 @@ npm run encrypt-key -- --url https://your-service-name.onrender.com --key 0xYOUR
 3. Give the agent the encrypted blob (base64 output) along with your transaction details
 4. The agent calls `send_token` with the `encryptedPrivateKey` parameter
 
-Use testnet keys only for demos. The server decrypts the key ephemerally to sign the transaction — it is not stored.
+The server decrypts the key ephemerally to sign the transaction — it is not stored.
 
 ## Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CELO_NETWORK` | `mainnet` | `mainnet` or `sepolia` |
 | `CELO_RPC_URL_MAINNET` | Forno public RPC | Override mainnet RPC |
-| `CELO_RPC_URL_SEPOLIA` | Forno Sepolia RPC | Override testnet RPC |
 | `CELO_PRIVATE_KEY` | — | Local stdio write tools only |
 | `WALLET_ENCRYPTION_PRIVATE_KEY` | — | RSA private key PEM for HTTP write tools |
 | `PORT` | `10000` | HTTP server port (set by Render) |
@@ -109,12 +103,13 @@ Copy `.env.example` to `.env` for local development.
 
 | Tool | Type | Description |
 |------|------|-------------|
-| `get_network_status` | read | Chain ID, block, gas price |
+| `get_network_status` | read | Mainnet chain ID, block, gas price |
 | `get_block` | read | Block by number/hash/latest |
 | `get_latest_blocks` | read | Recent blocks |
 | `get_transaction` | read | Tx + receipt |
 | `get_account` | read | CELO balance, nonce |
 | `get_celo_balances` | read | CELO + ERC-20 balances |
+| `get_stablecoin_balances` | read | Mento, USDC, USDT, and other mainnet stablecoins |
 | `get_token_info` | read | Token metadata |
 | `get_wallet_encryption_public_key` | read | RSA public key for encrypting private keys |
 | `estimate_send` | read* | Gas estimate (*needs encrypted or env key) |
