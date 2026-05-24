@@ -11,7 +11,7 @@ export function createServer(): McpServer {
   const clients = clientFactory.getClients();
 
   const server = new McpServer(
-    { name: "celo-mcp", version: "0.1.0" },
+    { name: "celina", version: "0.2.0" },
     {
       instructions: SERVER_INSTRUCTIONS,
       capabilities: {
