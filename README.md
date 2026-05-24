@@ -7,17 +7,17 @@ Website: [celina.andrewkimjoseph.com](https://celina.andrewkimjoseph.com)
 ## Install
 
 ```bash
-npm i @andrewkimjoseph/celina-mcp
+npm i @andrewkimjoseph/celina
 ```
 
-npm: [@andrewkimjoseph/celina-mcp](https://www.npmjs.com/package/@andrewkimjoseph/celina-mcp)
+npm: [@andrewkimjoseph/celina](https://www.npmjs.com/package/@andrewkimjoseph/celina)
 
 ## Quick start
 
 **From npm** (stdio MCP server):
 
 ```bash
-npx @andrewkimjoseph/celina-mcp
+npx @andrewkimjoseph/celina
 ```
 
 **From source** (development):
@@ -44,13 +44,14 @@ openssl rsa -pubout -in private.pem -out public.pem
 1. Push this repo to GitHub
 2. Render Dashboard → **New → Blueprint** → connect the repo
 3. Set `WALLET_ENCRYPTION_PRIVATE_KEY` in the Render Environment tab (paste contents of `private.pem`)
-4. Your MCP endpoint will be at `https://celina.onrender.com/mcp`
+4. (Optional) Add a custom domain in Render and set `ALLOWED_HOSTS` to that hostname (comma-separated if multiple)
+5. Your MCP endpoint will be at `https://mcp.celina.andrewkimjoseph.com/mcp` (or your Render URL + `/mcp`)
 
 > **Note:** Free Render services spin down after ~15 minutes of inactivity. Cold starts can take 30–60 seconds and may cause MCP client timeouts. Use a Starter plan for always-on hosting.
 
 ## Cursor / Claude Desktop config
 
-### Remote (Render — recommended)
+### Remote (recommended)
 
 ```json
 {
@@ -60,7 +61,7 @@ openssl rsa -pubout -in private.pem -out public.pem
       "args": [
         "-y",
         "mcp-remote",
-        "https://celina.onrender.com/mcp",
+        "https://mcp.celina.andrewkimjoseph.com/mcp",
         "--transport",
         "http-only"
       ]
@@ -76,11 +77,13 @@ Or with streamable HTTP directly:
   "mcpServers": {
     "celina": {
       "type": "streamable-http",
-      "url": "https://celina.onrender.com/mcp"
+      "url": "https://mcp.celina.andrewkimjoseph.com/mcp"
     }
   }
 }
 ```
+
+> Custom domains must be listed in `ALLOWED_HOSTS` on the server. Render's default hostname (`RENDER_EXTERNAL_HOSTNAME`) is always allowed automatically.
 
 ### Local stdio (npm)
 
@@ -89,7 +92,7 @@ Or with streamable HTTP directly:
   "mcpServers": {
     "celina": {
       "command": "npx",
-      "args": ["-y", "@andrewkimjoseph/celina-mcp"]
+      "args": ["-y", "@andrewkimjoseph/celina"]
     }
   }
 }
@@ -126,11 +129,11 @@ Write tools (`send_token`, `estimate_send`) accept an RSA-encrypted private key 
 
 1. Fetch the server's public key:
    - MCP tool: `get_wallet_encryption_public_key`
-   - HTTP: `GET https://celina.onrender.com/public-key`
+   - HTTP: `GET https://mcp.celina.andrewkimjoseph.com/public-key`
 2. Encrypt your key locally:
 
 ```bash
-npm run encrypt-key -- --url https://celina.onrender.com --key 0xYOUR_PRIVATE_KEY
+npm run encrypt-key -- --url https://mcp.celina.andrewkimjoseph.com --key 0xYOUR_PRIVATE_KEY
 ```
 
 3. Give the agent the encrypted blob (base64 output) along with your transaction details
@@ -145,6 +148,7 @@ The server decrypts the key ephemerally to sign the transaction — it is not st
 | `CELO_RPC_URL_MAINNET` | Forno public RPC | Override mainnet RPC |
 | `CELO_PRIVATE_KEY` | — | Local stdio write tools only |
 | `WALLET_ENCRYPTION_PRIVATE_KEY` | — | RSA private key PEM for HTTP write tools |
+| `ALLOWED_HOSTS` | — | Comma-separated custom hostnames (e.g. `mcp.celina.andrewkimjoseph.com`) |
 | `PORT` | `10000` | HTTP server port (set by Render) |
 
 Copy `.env.example` to `.env` for local development.

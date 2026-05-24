@@ -29,12 +29,12 @@ function printUsage() {
 Encrypt a private key for Celina with the server's RSA public key.
 
 Options:
-  --url <url>                 Fetch public key from server (e.g. https://celina.onrender.com)
+  --url <url>                 Fetch public key from server (e.g. https://mcp.celina.andrewkimjoseph.com)
   --public-key-file <path>    Use a local PEM public key file instead of --url
   --key <0x...>                Private key to encrypt (required)
 
 Examples:
-  npm run encrypt-key -- --url https://celina.onrender.com --key 0xabc...
+  npm run encrypt-key -- --url https://mcp.celina.andrewkimjoseph.com --key 0xabc...
   npm run encrypt-key -- --public-key-file ./public.pem --key 0xabc...
 `);
 }
