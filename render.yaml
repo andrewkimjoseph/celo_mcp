@@ -8,8 +8,6 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      - key: CELO_NETWORK
-        value: mainnet
       - key: NODE_ENV
         value: production
       - key: PORT
