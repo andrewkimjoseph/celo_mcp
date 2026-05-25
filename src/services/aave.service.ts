@@ -1,15 +1,8 @@
-import { supply, withdraw } from "@aave/client/actions";
-import { bigDecimal, chainId, evmAddress } from "@aave/types";
 import { erc20Abi } from "viem";
+import { aavePoolAbi } from "../abis/aave-pool.js";
 import type { CeloClientFactory, CeloClients } from "../clients/celo-client.js";
-import { aaveClient } from "../clients/aave-client.js";
-import { sendExecutionPlan } from "../clients/aave-send.js";
-import {
-  AAVE_CHAIN_ID,
-  AAVE_POOL,
-  AAVE_USDT,
-  AAVE_USDT_A_TOKEN,
-} from "../config/aave.js";
+import { AAVE_POOL, AAVE_USDT, AAVE_USDT_A_TOKEN } from "../config/aave.js";
+import { CELINA_DATA_SUFFIX } from "../config/celina-tag.js";
 import { decryptPrivateKey } from "../crypto/wallet-key-crypto.js";
 import { TokenService } from "./token.service.js";
 
@@ -36,13 +29,26 @@ export class AaveService {
     return clients;
   }
 
-  private formatAaveError(error: unknown): never {
-    if (error && typeof error === "object" && "name" in error && "message" in error) {
-      const named = error as { name: string; message: string };
-      throw new Error(`${named.name}: ${named.message}`);
+  private requireWallet(clients: CeloClients) {
+    const { public: publicClient, wallet, accountAddress: from } = clients;
+
+    if (!wallet || !from) {
+      throw new Error(
+        "Wallet client unavailable. Provide encryptedPrivateKey or set CELO_PRIVATE_KEY.",
+      );
     }
 
-    throw error instanceof Error ? error : new Error(String(error));
+    const account = wallet.account;
+    if (!account) {
+      throw new Error("Wallet account unavailable.");
+    }
+
+    const chain = publicClient.chain;
+    if (!chain) {
+      throw new Error("Chain configuration missing.");
+    }
+
+    return { publicClient, wallet, from, account, chain };
   }
 
   private async assertUsdtBalance(
@@ -89,43 +95,74 @@ export class AaveService {
     }
   }
 
-  async supplyUsdt(amount: string, encryptedPrivateKey?: string) {
-    const { public: publicClient, wallet, accountAddress: from } =
-      this.resolveClients(encryptedPrivateKey);
+  private async ensureUsdtAllowance(
+    publicClient: CeloClients["public"],
+    wallet: NonNullable<CeloClients["wallet"]>,
+    from: `0x${string}`,
+    account: NonNullable<NonNullable<CeloClients["wallet"]>["account"]>,
+    chain: NonNullable<CeloClients["public"]["chain"]>,
+    amountWei: bigint,
+  ): Promise<`0x${string}` | undefined> {
+    const allowance = await publicClient.readContract({
+      address: AAVE_USDT,
+      abi: erc20Abi,
+      functionName: "allowance",
+      args: [from, AAVE_POOL],
+    });
 
-    if (!wallet || !from) {
-      throw new Error(
-        "Wallet client unavailable. Provide encryptedPrivateKey or set CELO_PRIVATE_KEY.",
-      );
+    if (allowance >= amountWei) {
+      return undefined;
     }
+
+    const approvalHash = await wallet.writeContract({
+      chain,
+      account,
+      address: AAVE_USDT,
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [AAVE_POOL, amountWei],
+      dataSuffix: CELINA_DATA_SUFFIX,
+    });
+
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: approvalHash });
+    if (receipt.status === "reverted") {
+      throw new Error(`USDT approval reverted: ${approvalHash}`);
+    }
+
+    return approvalHash;
+  }
+
+  async supplyUsdt(amount: string, encryptedPrivateKey?: string) {
+    const clients = this.resolveClients(encryptedPrivateKey);
+    const { publicClient, wallet, from, account, chain } = this.requireWallet(clients);
 
     await this.assertUsdtBalance(publicClient, from, amount);
 
-    const planResult = await supply(aaveClient, {
-      market: evmAddress(AAVE_POOL),
-      amount: {
-        erc20: {
-          currency: evmAddress(AAVE_USDT),
-          value: bigDecimal(amount),
-        },
-      },
-      sender: evmAddress(from),
-      chainId: chainId(AAVE_CHAIN_ID),
-    });
+    const usdt = this.tokenService.resolveToken("USDT");
+    const amountWei = this.tokenService.parseAmount(amount, usdt.decimals);
 
-    if (planResult.isErr()) {
-      this.formatAaveError(planResult.error);
-    }
-
-    const { result, approvalHash } = await sendExecutionPlan(
-      wallet,
+    const approvalHash = await this.ensureUsdtAllowance(
       publicClient,
-      planResult.value,
+      wallet,
+      from,
+      account,
+      chain,
+      amountWei,
     );
 
-    const waitResult = await aaveClient.waitForTransaction(result);
-    if (waitResult.isErr()) {
-      this.formatAaveError(waitResult.error);
+    const hash = await wallet.writeContract({
+      chain,
+      account,
+      address: AAVE_POOL,
+      abi: aavePoolAbi,
+      functionName: "supply",
+      args: [AAVE_USDT, amountWei, from, 0],
+      dataSuffix: CELINA_DATA_SUFFIX,
+    });
+
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status === "reverted") {
+      throw new Error(`Aave supply reverted: ${hash}`);
     }
 
     return {
@@ -133,7 +170,7 @@ export class AaveService {
       amount,
       token: "USDT",
       market: AAVE_POOL,
-      hash: waitResult.value,
+      hash,
       approvalHash,
       operation: "SUPPLY",
     };
@@ -144,14 +181,8 @@ export class AaveService {
     encryptedPrivateKey?: string,
     withdrawMax?: boolean,
   ) {
-    const { public: publicClient, wallet, accountAddress: from } =
-      this.resolveClients(encryptedPrivateKey);
-
-    if (!wallet || !from) {
-      throw new Error(
-        "Wallet client unavailable. Provide encryptedPrivateKey or set CELO_PRIVATE_KEY.",
-      );
-    }
+    const clients = this.resolveClients(encryptedPrivateKey);
+    const { publicClient, wallet, from, account, chain } = this.requireWallet(clients);
 
     if (!withdrawMax && !amount) {
       throw new Error("Provide amount or set withdrawMax to true.");
@@ -161,36 +192,33 @@ export class AaveService {
       await this.assertSuppliedBalance(publicClient, from, amount);
     }
 
-    const withdrawAmount = withdrawMax
-      ? {
-          erc20: {
-            currency: evmAddress(AAVE_USDT),
-            value: { max: true as const },
-          },
-        }
-      : {
-          erc20: {
-            currency: evmAddress(AAVE_USDT),
-            value: { exact: bigDecimal(amount!) },
-          },
-        };
+    const usdt = this.tokenService.resolveToken("USDT");
+    const amountWei = withdrawMax
+      ? await publicClient.readContract({
+          address: AAVE_USDT_A_TOKEN,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [from],
+        })
+      : this.tokenService.parseAmount(amount!, usdt.decimals);
 
-    const planResult = await withdraw(aaveClient, {
-      market: evmAddress(AAVE_POOL),
-      amount: withdrawAmount,
-      sender: evmAddress(from),
-      chainId: chainId(AAVE_CHAIN_ID),
-    });
-
-    if (planResult.isErr()) {
-      this.formatAaveError(planResult.error);
+    if (amountWei === 0n) {
+      throw new Error("No supplied USDT balance to withdraw.");
     }
 
-    const { result } = await sendExecutionPlan(wallet, publicClient, planResult.value);
+    const hash = await wallet.writeContract({
+      chain,
+      account,
+      address: AAVE_POOL,
+      abi: aavePoolAbi,
+      functionName: "withdraw",
+      args: [AAVE_USDT, amountWei, from],
+      dataSuffix: CELINA_DATA_SUFFIX,
+    });
 
-    const waitResult = await aaveClient.waitForTransaction(result);
-    if (waitResult.isErr()) {
-      this.formatAaveError(waitResult.error);
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status === "reverted") {
+      throw new Error(`Aave withdraw reverted: ${hash}`);
     }
 
     return {
@@ -198,7 +226,7 @@ export class AaveService {
       amount: withdrawMax ? "max" : amount!,
       token: "USDT",
       market: AAVE_POOL,
-      hash: waitResult.value,
+      hash,
       operation: "WITHDRAW",
       withdrawMax: Boolean(withdrawMax),
     };
