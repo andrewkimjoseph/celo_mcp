@@ -1,5 +1,6 @@
-import { encodeFunctionData, erc20Abi, parseEther } from "viem";
+import { erc20Abi, parseEther } from "viem";
 import type { CeloClientFactory, CeloClients } from "../clients/celo-client.js";
+import { CELINA_DATA_SUFFIX } from "../config/celina-tag.js";
 import { decryptPrivateKey } from "../crypto/wallet-key-crypto.js";
 import { TokenService } from "./token.service.js";
 
@@ -61,16 +62,12 @@ export class TransactionService {
     }
 
     const tokenAmount = this.tokenService.parseAmount(amount, resolved.decimals);
-    const data = encodeFunctionData({
+    const gas = await client.estimateContractGas({
+      account: from,
+      address: resolved.address,
       abi: erc20Abi,
       functionName: "transfer",
       args: [to, tokenAmount],
-    });
-
-    const gas = await client.estimateGas({
-      account: from,
-      to: resolved.address,
-      data,
     });
 
     return {
@@ -116,6 +113,7 @@ export class TransactionService {
         account,
         to,
         value: parseEther(amount),
+        data: CELINA_DATA_SUFFIX,
       });
 
       const receipt = await client.waitForTransactionReceipt({ hash });
@@ -138,6 +136,7 @@ export class TransactionService {
       abi: erc20Abi,
       functionName: "transfer",
       args: [to, tokenAmount],
+      dataSuffix: CELINA_DATA_SUFFIX,
     });
 
     const receipt = await client.waitForTransactionReceipt({ hash });
