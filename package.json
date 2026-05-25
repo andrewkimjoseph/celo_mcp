@@ -41,7 +41,6 @@
   "author": "Andrew Kim Joseph",
   "license": "MIT",
   "dependencies": {
-    "@aave/client": "^0.9.3",
     "@mento-protocol/mento-sdk": "^3.2.8",
     "@modelcontextprotocol/sdk": "^1.22.0",
     "dotenv": "^17.4.2",
