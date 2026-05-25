@@ -1,3 +1,4 @@
+import { concat, decodeFunctionData, erc20Abi, formatUnits, type Hex } from "viem";
 import {
   ChainId,
   deadlineFromMinutes,
@@ -6,8 +7,8 @@ import {
   FXMarketClosedError,
   type CallParams,
 } from "../clients/mento-sdk.js";
-import { formatUnits } from "viem";
 import type { CeloClientFactory, CeloClients } from "../clients/celo-client.js";
+import { CELINA_DATA_SUFFIX } from "../config/celina-tag.js";
 import { toMentoTokenAddress } from "../config/chains.js";
 import { decryptPrivateKey } from "../crypto/wallet-key-crypto.js";
 import { TokenService, type ResolvedToken } from "./token.service.js";
@@ -21,6 +22,37 @@ export interface MentoFxParams {
 
 const DEFAULT_SLIPPAGE = 0.5;
 const DEFAULT_DEADLINE_MINUTES = 5;
+
+type Erc20ApproveCall = {
+  token: `0x${string}`;
+  spender: `0x${string}`;
+  amount: bigint;
+};
+
+function parseErc20Approve(params: CallParams): Erc20ApproveCall | null {
+  try {
+    const decoded = decodeFunctionData({
+      abi: erc20Abi,
+      data: params.data as Hex,
+    });
+
+    if (decoded.functionName !== "approve") {
+      return null;
+    }
+
+    return {
+      token: params.to as `0x${string}`,
+      spender: decoded.args[0] as `0x${string}`,
+      amount: decoded.args[1] as bigint,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function taggedCalldata(data: Hex): Hex {
+  return concat([data, CELINA_DATA_SUFFIX]);
+}
 
 export class MentoFxService {
   private readonly tokenService: TokenService;
@@ -96,10 +128,10 @@ export class MentoFxService {
     throw error instanceof Error ? error : new Error(String(error));
   }
 
-  private toGasParams(params: CallParams) {
+  private toSendParams(params: CallParams) {
     return {
       to: params.to as `0x${string}`,
-      data: params.data as `0x${string}`,
+      data: taggedCalldata(params.data as Hex),
       value: BigInt(params.value),
     };
   }
@@ -109,11 +141,60 @@ export class MentoFxService {
     from: `0x${string}`,
     params: CallParams,
   ) {
+    const approve = parseErc20Approve(params);
+    if (approve) {
+      const gas = await client.estimateContractGas({
+        account: from,
+        address: approve.token,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [approve.spender, approve.amount],
+      });
+      return gas.toString();
+    }
+
     const gas = await client.estimateGas({
       account: from,
-      ...this.toGasParams(params),
+      to: params.to as `0x${string}`,
+      data: params.data as Hex,
+      value: BigInt(params.value),
     });
     return gas.toString();
+  }
+
+  private async executeCall(
+    wallet: NonNullable<CeloClients["wallet"]>,
+    publicClient: CeloClients["public"],
+    params: CallParams,
+  ): Promise<`0x${string}`> {
+    const account = wallet.account;
+    if (!account) {
+      throw new Error("Wallet account unavailable.");
+    }
+
+    const chain = publicClient.chain;
+    if (!chain) {
+      throw new Error("Chain configuration missing.");
+    }
+
+    const approve = parseErc20Approve(params);
+    if (approve) {
+      return wallet.writeContract({
+        chain,
+        account,
+        address: approve.token,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [approve.spender, approve.amount],
+        dataSuffix: CELINA_DATA_SUFFIX,
+      });
+    }
+
+    return wallet.sendTransaction({
+      chain,
+      account,
+      ...this.toSendParams(params),
+    });
   }
 
   private baseQuoteFields(
@@ -238,16 +319,6 @@ export class MentoFxService {
       );
     }
 
-    const account = wallet.account;
-    if (!account) {
-      throw new Error("Wallet account unavailable.");
-    }
-
-    const chain = client.chain;
-    if (!chain) {
-      throw new Error("Chain configuration missing");
-    }
-
     const { resolvedIn, resolvedOut, mentoIn, mentoOut } =
       this.resolveMentoPair(tokenIn, tokenOut);
     const recipient = params?.recipient ?? from;
@@ -269,20 +340,11 @@ export class MentoFxService {
       let approvalHash: `0x${string}` | undefined;
 
       if (approval) {
-        approvalHash = await wallet.sendTransaction({
-          chain,
-          account,
-          ...this.toGasParams(approval),
-        });
+        approvalHash = await this.executeCall(wallet, client, approval);
         await client.waitForTransactionReceipt({ hash: approvalHash });
       }
 
-      const hash = await wallet.sendTransaction({
-        chain,
-        account,
-        ...this.toGasParams(swap.params),
-      });
-
+      const hash = await this.executeCall(wallet, client, swap.params);
       const receipt = await client.waitForTransactionReceipt({ hash });
 
       return {
