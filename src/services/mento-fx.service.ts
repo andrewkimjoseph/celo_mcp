@@ -10,7 +10,6 @@ import {
 import type { CeloClientFactory, CeloClients } from "../clients/celo-client.js";
 import { CELINA_DATA_SUFFIX } from "../config/celina-tag.js";
 import { toMentoTokenAddress } from "../config/chains.js";
-import { decryptPrivateKey } from "../crypto/wallet-key-crypto.js";
 import {
   ALLOWANCE_MAPPING_SLOTS,
   erc20AllowanceStateOverride,
@@ -22,7 +21,6 @@ export interface MentoFxParams {
   slippageTolerance?: number;
   deadlineMinutes?: number;
   recipient?: `0x${string}`;
-  encryptedPrivateKey?: string;
 }
 
 const DEFAULT_SLIPPAGE = 0.5;
@@ -66,12 +64,7 @@ export class MentoFxService {
     this.tokenService = new TokenService(clientFactory);
   }
 
-  private resolveClients(encryptedPrivateKey?: string): CeloClients {
-    if (encryptedPrivateKey) {
-      const privateKey = decryptPrivateKey(encryptedPrivateKey);
-      return this.clientFactory.getClientsForAccount(privateKey);
-    }
-
+  private requireClients(): CeloClients {
     const clients = this.clientFactory.getClients();
     if (!clients.wallet || !clients.accountAddress) {
       throw new Error(
@@ -294,9 +287,7 @@ export class MentoFxService {
     amount: string,
     params?: MentoFxParams,
   ) {
-    const { public: client, accountAddress: from } = this.resolveClients(
-      params?.encryptedPrivateKey,
-    );
+    const { public: client, accountAddress: from } = this.requireClients();
 
     if (!from) {
       throw new Error("Wallet address unavailable.");
@@ -365,9 +356,7 @@ export class MentoFxService {
     amount: string,
     params?: MentoFxParams,
   ) {
-    const { public: client, wallet, accountAddress: from } = this.resolveClients(
-      params?.encryptedPrivateKey,
-    );
+    const { public: client, wallet, accountAddress: from } = this.requireClients();
 
     if (!wallet || !from) {
       throw new Error(

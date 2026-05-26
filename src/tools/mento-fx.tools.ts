@@ -5,13 +5,6 @@ import { addressSchema, tokenSymbolSchema } from "../schemas/common.js";
 import type { ToolModule } from "./types.js";
 import { err, ok } from "./helpers.js";
 
-const encryptedPrivateKeySchema = z
-  .string()
-  .optional()
-  .describe(
-    "Optional RSA-OAEP encrypted private key (base64) for self-hosted HTTP mode. Prefer CELO_PRIVATE_KEY in MCP env.",
-  );
-
 const mentoFxInputSchema = z.object({
   tokenIn: tokenSymbolSchema.describe("Input token symbol or address"),
   tokenOut: tokenSymbolSchema.describe("Output token symbol or address"),
@@ -34,7 +27,6 @@ const mentoFxWalletSchema = mentoFxInputSchema.extend({
     .positive()
     .optional()
     .describe("Transaction deadline in minutes (default 5)"),
-  encryptedPrivateKey: encryptedPrivateKeySchema,
 });
 
 export const mentoFxTools: ToolModule = {
@@ -66,22 +58,13 @@ export const mentoFxTools: ToolModule = {
         inputSchema: mentoFxWalletSchema,
         annotations: { readOnlyHint: true },
       },
-      async ({
-        tokenIn,
-        tokenOut,
-        amount,
-        recipient,
-        slippageTolerance,
-        deadlineMinutes,
-        encryptedPrivateKey,
-      }) => {
+      async ({ tokenIn, tokenOut, amount, recipient, slippageTolerance, deadlineMinutes }) => {
         try {
           return ok(
             await ctx.mentoFx.estimateFx(tokenIn, tokenOut, amount, {
               recipient: recipient as `0x${string}` | undefined,
               slippageTolerance,
               deadlineMinutes,
-              encryptedPrivateKey,
             }),
           );
         } catch (error) {
@@ -102,22 +85,13 @@ export const mentoFxTools: ToolModule = {
           openWorldHint: true,
         },
       },
-      async ({
-        tokenIn,
-        tokenOut,
-        amount,
-        recipient,
-        slippageTolerance,
-        deadlineMinutes,
-        encryptedPrivateKey,
-      }) => {
+      async ({ tokenIn, tokenOut, amount, recipient, slippageTolerance, deadlineMinutes }) => {
         try {
           return ok(
             await ctx.mentoFx.executeFx(tokenIn, tokenOut, amount, {
               recipient: recipient as `0x${string}` | undefined,
               slippageTolerance,
               deadlineMinutes,
-              encryptedPrivateKey,
             }),
           );
         } catch (error) {
