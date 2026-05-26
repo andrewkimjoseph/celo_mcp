@@ -1,6 +1,8 @@
 node_modules/
 build/
 dist/
+*.tgz
+wrapper/node_modules/
 .env
 .env.*
 !.env.example
