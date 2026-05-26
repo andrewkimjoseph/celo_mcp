@@ -1,9 +1,12 @@
 import { erc20Abi } from "viem";
 import { aavePoolAbi } from "../abis/aave-pool.js";
 import type { CeloClientFactory, CeloClients } from "../clients/celo-client.js";
-import { AAVE_POOL, AAVE_USDT, AAVE_USDT_A_TOKEN } from "../config/aave.js";
+import {
+  AAVE_POOL,
+  resolveAaveAsset,
+  type AaveAsset,
+} from "../config/aave.js";
 import { CELINA_DATA_SUFFIX } from "../config/celina-tag.js";
-import { decryptPrivateKey } from "../crypto/wallet-key-crypto.js";
 import { TokenService } from "./token.service.js";
 
 export class AaveService {
@@ -13,12 +16,7 @@ export class AaveService {
     this.tokenService = new TokenService(clientFactory);
   }
 
-  private resolveClients(encryptedPrivateKey?: string): CeloClients {
-    if (encryptedPrivateKey) {
-      const privateKey = decryptPrivateKey(encryptedPrivateKey);
-      return this.clientFactory.getClientsForAccount(privateKey);
-    }
-
+  private requireClients(): CeloClients {
     const clients = this.clientFactory.getClients();
     if (!clients.wallet || !clients.accountAddress) {
       throw new Error(
@@ -51,16 +49,44 @@ export class AaveService {
     return { publicClient, wallet, from, account, chain };
   }
 
-  private async assertUsdtBalance(
+  private async assertUnderlyingBalance(
+    asset: AaveAsset,
     publicClient: CeloClients["public"],
     owner: `0x${string}`,
     amount: string,
   ) {
-    const usdt = this.tokenService.resolveToken("USDT");
-    const required = this.tokenService.parseAmount(amount, usdt.decimals);
+    const token = this.tokenService.resolveToken(asset.symbol);
+    const required = this.tokenService.parseAmount(amount, token.decimals);
 
     const balance = await publicClient.readContract({
-      address: AAVE_USDT,
+      address: asset.underlying,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [owner],
+    });
+
+    if (balance < required) {
+      const celoHint =
+        asset.symbol === "CELO"
+          ? " Aave requires wrapped CELO (ERC-20), not native CELO."
+          : "";
+      throw new Error(
+        `Insufficient ${asset.symbol} balance. Required ${amount} ${asset.symbol}, available ${balance.toString()} raw units.${celoHint}`,
+      );
+    }
+  }
+
+  private async assertATokenBalance(
+    asset: AaveAsset,
+    publicClient: CeloClients["public"],
+    owner: `0x${string}`,
+    amount: string,
+  ) {
+    const token = this.tokenService.resolveToken(asset.symbol);
+    const required = this.tokenService.parseAmount(amount, token.decimals);
+
+    const balance = await publicClient.readContract({
+      address: asset.aToken,
       abi: erc20Abi,
       functionName: "balanceOf",
       args: [owner],
@@ -68,34 +94,14 @@ export class AaveService {
 
     if (balance < required) {
       throw new Error(
-        `Insufficient USDT balance. Required ${amount} USDT, available ${balance.toString()} raw units.`,
+        `Insufficient Aave ${asset.symbol} supply balance. Required ${amount} ${asset.symbol}, available ${balance.toString()} raw aToken units.`,
       );
     }
   }
 
-  private async assertSuppliedBalance(
-    publicClient: CeloClients["public"],
-    owner: `0x${string}`,
-    amount: string,
-  ) {
-    const usdt = this.tokenService.resolveToken("USDT");
-    const required = this.tokenService.parseAmount(amount, usdt.decimals);
-
-    const balance = await publicClient.readContract({
-      address: AAVE_USDT_A_TOKEN,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [owner],
-    });
-
-    if (balance < required) {
-      throw new Error(
-        `Insufficient Aave USDT supply balance. Required ${amount} USDT, available ${balance.toString()} raw aToken units.`,
-      );
-    }
-  }
-
-  private async ensureUsdtAllowance(
+  private async ensureAllowance(
+    underlying: `0x${string}`,
+    tokenSymbol: string,
     publicClient: CeloClients["public"],
     wallet: NonNullable<CeloClients["wallet"]>,
     from: `0x${string}`,
@@ -104,7 +110,7 @@ export class AaveService {
     amountWei: bigint,
   ): Promise<`0x${string}` | undefined> {
     const allowance = await publicClient.readContract({
-      address: AAVE_USDT,
+      address: underlying,
       abi: erc20Abi,
       functionName: "allowance",
       args: [from, AAVE_POOL],
@@ -117,7 +123,7 @@ export class AaveService {
     const approvalHash = await wallet.writeContract({
       chain,
       account,
-      address: AAVE_USDT,
+      address: underlying,
       abi: erc20Abi,
       functionName: "approve",
       args: [AAVE_POOL, amountWei],
@@ -126,22 +132,25 @@ export class AaveService {
 
     const receipt = await publicClient.waitForTransactionReceipt({ hash: approvalHash });
     if (receipt.status === "reverted") {
-      throw new Error(`USDT approval reverted: ${approvalHash}`);
+      throw new Error(`${tokenSymbol} approval reverted: ${approvalHash}`);
     }
 
     return approvalHash;
   }
 
-  async supplyUsdt(amount: string, encryptedPrivateKey?: string) {
-    const clients = this.resolveClients(encryptedPrivateKey);
+  async supply(token: string, amount: string) {
+    const asset = resolveAaveAsset(token);
+    const clients = this.requireClients();
     const { publicClient, wallet, from, account, chain } = this.requireWallet(clients);
 
-    await this.assertUsdtBalance(publicClient, from, amount);
+    await this.assertUnderlyingBalance(asset, publicClient, from, amount);
 
-    const usdt = this.tokenService.resolveToken("USDT");
-    const amountWei = this.tokenService.parseAmount(amount, usdt.decimals);
+    const resolved = this.tokenService.resolveToken(asset.symbol);
+    const amountWei = this.tokenService.parseAmount(amount, resolved.decimals);
 
-    const approvalHash = await this.ensureUsdtAllowance(
+    const approvalHash = await this.ensureAllowance(
+      asset.underlying,
+      asset.symbol,
       publicClient,
       wallet,
       from,
@@ -156,7 +165,7 @@ export class AaveService {
       address: AAVE_POOL,
       abi: aavePoolAbi,
       functionName: "supply",
-      args: [AAVE_USDT, amountWei, from, 0],
+      args: [asset.underlying, amountWei, from, 0],
       dataSuffix: CELINA_DATA_SUFFIX,
     });
 
@@ -168,7 +177,7 @@ export class AaveService {
     return {
       from,
       amount,
-      token: "USDT",
+      token: asset.symbol,
       market: AAVE_POOL,
       hash,
       approvalHash,
@@ -176,12 +185,13 @@ export class AaveService {
     };
   }
 
-  async withdrawUsdt(
+  async withdraw(
+    token: string,
     amount: string | undefined,
-    encryptedPrivateKey?: string,
     withdrawMax?: boolean,
   ) {
-    const clients = this.resolveClients(encryptedPrivateKey);
+    const asset = resolveAaveAsset(token);
+    const clients = this.requireClients();
     const { publicClient, wallet, from, account, chain } = this.requireWallet(clients);
 
     if (!withdrawMax && !amount) {
@@ -189,21 +199,21 @@ export class AaveService {
     }
 
     if (!withdrawMax && amount) {
-      await this.assertSuppliedBalance(publicClient, from, amount);
+      await this.assertATokenBalance(asset, publicClient, from, amount);
     }
 
-    const usdt = this.tokenService.resolveToken("USDT");
+    const resolved = this.tokenService.resolveToken(asset.symbol);
     const amountWei = withdrawMax
       ? await publicClient.readContract({
-          address: AAVE_USDT_A_TOKEN,
+          address: asset.aToken,
           abi: erc20Abi,
           functionName: "balanceOf",
           args: [from],
         })
-      : this.tokenService.parseAmount(amount!, usdt.decimals);
+      : this.tokenService.parseAmount(amount!, resolved.decimals);
 
     if (amountWei === 0n) {
-      throw new Error("No supplied USDT balance to withdraw.");
+      throw new Error(`No supplied ${asset.symbol} balance to withdraw.`);
     }
 
     const hash = await wallet.writeContract({
@@ -212,7 +222,7 @@ export class AaveService {
       address: AAVE_POOL,
       abi: aavePoolAbi,
       functionName: "withdraw",
-      args: [AAVE_USDT, amountWei, from],
+      args: [asset.underlying, amountWei, from],
       dataSuffix: CELINA_DATA_SUFFIX,
     });
 
@@ -224,7 +234,7 @@ export class AaveService {
     return {
       from,
       amount: withdrawMax ? "max" : amount!,
-      token: "USDT",
+      token: asset.symbol,
       market: AAVE_POOL,
       hash,
       operation: "WITHDRAW",
