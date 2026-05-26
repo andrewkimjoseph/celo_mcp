@@ -200,7 +200,6 @@ Token symbols are resolved case-insensitively. Legacy aliases `cUSD` and `cEUR` 
 | `get_celo_balances` | read | CELO + ERC-20 balances (default: CELO + USDm) |
 | `get_stablecoin_balances` | read | All registry stablecoins including GoodDollar |
 | `get_token_info` | read | Token metadata |
-| `get_wallet_encryption_public_key` | read | RSA public key (HTTP/self-hosted mode only) |
 | `estimate_send` | read* | Gas estimate (*needs `CELO_PRIVATE_KEY`) |
 | `send_token` | write | Send CELO or ERC-20 |
 | `get_mento_fx_quote` | read | Mento FX expected output (no wallet) |
