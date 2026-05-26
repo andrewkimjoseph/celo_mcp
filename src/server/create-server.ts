@@ -23,7 +23,11 @@ export function createServer(): McpServer {
 
   registerAllTools(
     server,
-    createAppContext(clientFactory, clients.accountAddress),
+    createAppContext(
+      clientFactory,
+      clients.accountAddress,
+      config.selfAgentPrivateKey,
+    ),
   );
 
   return server;

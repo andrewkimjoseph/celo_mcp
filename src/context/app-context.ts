@@ -6,11 +6,13 @@ import { TransactionService } from "../services/transaction.service.js";
 import { MentoFxService } from "../services/mento-fx.service.js";
 import { GoodDollarService } from "../services/gooddollar.service.js";
 import { AaveService } from "../services/aave.service.js";
+import { SelfService } from "../services/self.service.js";
 
 export interface AppContext {
   config: {
     hasWallet: boolean;
     walletAddress?: `0x${string}`;
+    hasSelfAgentKey: boolean;
   };
   blockchain: BlockchainService;
   account: AccountService;
@@ -19,16 +21,19 @@ export interface AppContext {
   mentoFx: MentoFxService;
   gooddollar: GoodDollarService;
   aave: AaveService;
+  self: SelfService;
 }
 
 export function createAppContext(
   clientFactory: CeloClientFactory,
   walletAddress?: `0x${string}`,
+  selfAgentPrivateKey?: `0x${string}`,
 ): AppContext {
   return {
     config: {
       hasWallet: Boolean(walletAddress),
       walletAddress,
+      hasSelfAgentKey: Boolean(selfAgentPrivateKey),
     },
     blockchain: new BlockchainService(clientFactory),
     account: new AccountService(clientFactory),
@@ -37,5 +42,6 @@ export function createAppContext(
     mentoFx: new MentoFxService(clientFactory),
     gooddollar: new GoodDollarService(clientFactory),
     aave: new AaveService(clientFactory),
+    self: new SelfService(clientFactory, selfAgentPrivateKey),
   };
 }

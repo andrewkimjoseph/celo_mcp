@@ -3,6 +3,7 @@ import type { AppContext } from "../context/app-context.js";
 import type { ToolModule } from "./types.js";
 import { accountTools, blockchainTools } from "./blockchain.tools.js";
 import { gooddollarTools } from "./gooddollar.tools.js";
+import { selfTools } from "./self.tools.js";
 import { tokenTools } from "./token.tools.js";
 import { transactionTools } from "./transaction.tools.js";
 import { mentoFxTools } from "./mento-fx.tools.js";
@@ -18,6 +19,7 @@ export const toolModules: ToolModule[] = [
   mentoFxTools,
   aaveTools,
   gooddollarTools,
+  selfTools,
 ];
 
 export function registerAllTools(server: McpServer, ctx: AppContext): void {
