@@ -11,6 +11,11 @@ import type { CeloClientFactory, CeloClients } from "../clients/celo-client.js";
 import { CELINA_DATA_SUFFIX } from "../config/celina-tag.js";
 import { toMentoTokenAddress } from "../config/chains.js";
 import { decryptPrivateKey } from "../crypto/wallet-key-crypto.js";
+import {
+  ALLOWANCE_MAPPING_SLOTS,
+  erc20AllowanceStateOverride,
+  isLikelyTransferFailed,
+} from "../utils/erc20-allowance-storage.js";
 import { TokenService, type ResolvedToken } from "./token.service.js";
 
 export interface MentoFxParams {
@@ -162,6 +167,48 @@ export class MentoFxService {
     return gas.toString();
   }
 
+  /**
+   * Swap gas estimation runs transferFrom; without on-chain approval that reverts.
+   * Simulate sufficient allowance via eth_estimateGas stateOverride.
+   */
+  private async estimateSwapGasWithAllowance(
+    client: CeloClients["public"],
+    from: `0x${string}`,
+    params: CallParams,
+    approve: Erc20ApproveCall,
+  ) {
+    const request = {
+      account: from,
+      to: params.to as `0x${string}`,
+      data: params.data as Hex,
+      value: BigInt(params.value),
+    };
+
+    for (const mappingSlot of ALLOWANCE_MAPPING_SLOTS) {
+      try {
+        const gas = await client.estimateGas({
+          ...request,
+          stateOverride: erc20AllowanceStateOverride(
+            approve.token,
+            from,
+            approve.spender,
+            approve.amount,
+            mappingSlot,
+          ),
+        });
+        return gas.toString();
+      } catch (error) {
+        if (!isLikelyTransferFailed(error)) {
+          throw error;
+        }
+      }
+    }
+
+    throw new Error(
+      "Could not estimate Mento FX swap gas: failed to simulate ERC-20 allowance for this token.",
+    );
+  }
+
   private async executeCall(
     wallet: NonNullable<CeloClients["wallet"]>,
     publicClient: CeloClients["public"],
@@ -273,12 +320,21 @@ export class MentoFxService {
         { slippageTolerance, deadline },
       );
 
-      const [approvalGas, fxGas] = await Promise.all([
-        approval
-          ? this.estimateCallGas(client, from, approval)
-          : Promise.resolve(undefined),
-        this.estimateCallGas(client, from, swap.params),
-      ]);
+      const approvalParsed = approval ? parseErc20Approve(approval) : null;
+
+      const approvalGas = approval
+        ? await this.estimateCallGas(client, from, approval)
+        : undefined;
+
+      const fxGas =
+        approvalParsed !== null
+          ? await this.estimateSwapGasWithAllowance(
+              client,
+              from,
+              swap.params,
+              approvalParsed,
+            )
+          : await this.estimateCallGas(client, from, swap.params);
 
       return {
         ...this.baseQuoteFields(
