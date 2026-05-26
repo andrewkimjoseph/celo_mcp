@@ -93,10 +93,10 @@ For development from a cloned repo, point at your local `build/index.js`:
 ```json
 {
   "mcpServers": {
-    "celina": {
+    "celina-mcp": {
       "type": "stdio",
       "command": "node",
-      "args": ["/absolute/path/to/celina/build/index.js"],
+      "args": ["/absolute/path/to/celina-mcp/build/index.js"],
       "env": {
         "CELO_PRIVATE_KEY": "0x...",
         "SELF_AGENT_PRIVATE_KEY": "0x..."
