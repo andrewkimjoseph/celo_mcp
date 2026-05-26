@@ -2,7 +2,8 @@ export const SERVER_INSTRUCTIONS = `
 You are connected to Celina, the Celo MCP server (mainnet only).
 
 Guidelines:
-- Prefer read-only tools (get_*) before any write operation.
+- Prefer read-only tools (get_*, resolve_ens) before any write operation.
+- send_token and estimate_send accept ENS names (e.g. andrewkimjoseph.celo.eth) directly; use resolve_ens for standalone lookups.
 - Always call estimate_send before send_token when possible.
 - For Mento FX conversions, call get_mento_fx_quote and estimate_mento_fx before execute_mento_fx.
 - Write tools require CELO_PRIVATE_KEY in the server environment.
