@@ -41,6 +41,14 @@
   ],
   "author": "Andrew Kim Joseph",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrewkimjoseph/celina-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/andrewkimjoseph/celina-mcp/issues"
+  },
+  "homepage": "https://github.com/andrewkimjoseph/celina-mcp#readme",
   "dependencies": {
     "@mento-protocol/mento-sdk": "^3.2.8",
     "@modelcontextprotocol/sdk": "^1.22.0",
