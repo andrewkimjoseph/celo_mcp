@@ -256,6 +256,8 @@ The server decrypts the key ephemerally to sign the transaction — it is not st
 |----------|---------|-------------|
 | `CELO_RPC_URL_MAINNET` | Forno public RPC | Override mainnet RPC |
 | `CELO_PRIVATE_KEY` | — | Local stdio write tools only |
+| `SELF_AGENT_PRIVATE_KEY` | — | Self Agent ID signing/identity tools (separate from CELO wallet) |
+| `SELF_AGENT_API_BASE` | `https://app.ai.self.xyz` | Override Self Agent ID REST API base URL |
 | `WALLET_ENCRYPTION_PRIVATE_KEY` | — | RSA private key PEM for HTTP write tools |
 | `ALLOWED_HOSTS` | — | Comma-separated custom hostnames (e.g. `mcp.celina.andrewkimjoseph.com`) |
 | `PORT` | `10000` | HTTP server port (set by Render) |
@@ -298,6 +300,33 @@ Token symbols are resolved case-insensitively. Legacy aliases `cUSD` and `cEUR` 
 | `execute_mento_fx` | write | Execute Mento FX conversion |
 | `supply_aave_usdt` | write | Supply USDT to Aave V3 on Celo |
 | `withdraw_aave_usdt` | write | Withdraw USDT from Aave V3 on Celo |
+| `get_gooddollar_whitelisting_info` | read | GoodDollar IdentityV4 whitelist status |
+| `verify_self_agent` | read | Verify Self Agent ID on-chain by address |
+| `lookup_self_agent` | read | Look up Self agent by numeric ID (ai.self.xyz) |
+| `verify_self_request` | read | Verify signed Self Agent HTTP request headers |
+| `register_self_agent` | write | Start Self agent registration (QR/deep link) |
+| `check_self_registration` | read* | Poll registration/refresh/deregister session (*may return private key) |
+| `get_self_identity` | read* | Current Self agent identity (*needs agent key) |
+| `refresh_self_proof` | write | Renew human proof after on-chain expiry (`isProofFresh` false) |
+| `deregister_self_agent` | write | Irreversibly revoke Self agent identity |
+| `sign_self_request` | read* | Sign HTTP request with Self agent headers (*needs agent key) |
+| `authenticated_self_fetch` | write | HTTP fetch with Self agent auth (*needs agent key) |
+
+### Self Agent ID notes
+
+- **Registration lifecycle APIs** (`register_self_agent`, `refresh_self_proof`, `deregister_self_agent`) use `network: "mainnet"` in the Self REST API request body.
+- **Demo and gated HTTP endpoints** (e.g. `https://app.ai.self.xyz/api/demo/verify`) require the query param **`network=celo-mainnet`**, not `network=mainnet`.
+- **QR scan URLs** use `/scan/{sessionToken}`, not `/qr/...`.
+- **`refresh_self_proof`** only starts after on-chain proof expiry (`isProofFresh` is false); while fresh it returns a clear error instead of a QR that will fail on-chain. The 30-day `is_expiring_soon` flag (matching Self SDK `isProofExpiringSoon`) is for warnings only. Self SDK also documents deregister → re-register as an alternative renewal path.
+
+Example authenticated demo call:
+
+```text
+authenticated_self_fetch
+  method: POST
+  url: https://app.ai.self.xyz/api/demo/verify?network=celo-mainnet
+  body: {}
+```
 
 ## Adding a new tool
 
@@ -325,8 +354,8 @@ No changes to `src/index.ts` or server bootstrap required.
 
 - [x] Mento FX routing (`get_mento_fx_quote`, `estimate_mento_fx`, `execute_mento_fx`)
 - [x] Aave lending tools (`supply_aave_usdt`, `withdraw_aave_usdt`)
-- [ ] Self proof verification (`ai.self.xyz`)
-- [ ] Self Agent ID check
+- [x] Self proof verification (`verify_self_agent`, `verify_self_request`, `ai.self.xyz`)
+- [x] Self Agent ID check (`lookup_self_agent`, registration & lifecycle tools)
 
 ## Development
 
