@@ -1,7 +1,6 @@
 import { erc20Abi, parseEther } from "viem";
 import type { CeloClientFactory, CeloClients } from "../clients/celo-client.js";
 import { CELINA_DATA_SUFFIX } from "../config/celina-tag.js";
-import { decryptPrivateKey } from "../crypto/wallet-key-crypto.js";
 import { TokenService } from "./token.service.js";
 
 export class TransactionService {
@@ -11,12 +10,7 @@ export class TransactionService {
     this.tokenService = new TokenService(clientFactory);
   }
 
-  private resolveClients(encryptedPrivateKey?: string): CeloClients {
-    if (encryptedPrivateKey) {
-      const privateKey = decryptPrivateKey(encryptedPrivateKey);
-      return this.clientFactory.getClientsForAccount(privateKey);
-    }
-
+  private requireClients(): CeloClients {
     const clients = this.clientFactory.getClients();
     if (!clients.wallet || !clients.accountAddress) {
       throw new Error(
@@ -27,15 +21,8 @@ export class TransactionService {
     return clients;
   }
 
-  async estimateSend(
-    to: `0x${string}`,
-    token: string,
-    amount: string,
-    encryptedPrivateKey?: string,
-  ) {
-    const { public: client, accountAddress: from } = this.resolveClients(
-      encryptedPrivateKey,
-    );
+  async estimateSend(to: `0x${string}`, token: string, amount: string) {
+    const { public: client, accountAddress: from } = this.requireClients();
 
     if (!from) {
       throw new Error("Wallet address unavailable.");
@@ -80,15 +67,8 @@ export class TransactionService {
     };
   }
 
-  async sendToken(
-    to: `0x${string}`,
-    token: string,
-    amount: string,
-    encryptedPrivateKey?: string,
-  ) {
-    const { public: client, wallet, accountAddress: from } = this.resolveClients(
-      encryptedPrivateKey,
-    );
+  async sendToken(to: `0x${string}`, token: string, amount: string) {
+    const { public: client, wallet, accountAddress: from } = this.requireClients();
 
     if (!wallet || !from) {
       throw new Error(

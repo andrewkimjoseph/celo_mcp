@@ -53,26 +53,4 @@ export class CeloClientFactory {
 
     return this.clients;
   }
-
-  getClientsForAccount(privateKey: `0x${string}`): CeloClients {
-    const rpcUrl = this.config.rpcUrl ?? DEFAULT_RPC_URL;
-    const transport = http(rpcUrl);
-    const publicClient = createPublicClient({
-      chain: CHAIN,
-      transport,
-    }) as PublicClient;
-    const account = privateKeyToAccount(privateKey);
-
-    const wallet = createWalletClient({
-      account,
-      chain: CHAIN,
-      transport,
-    });
-
-    return {
-      public: publicClient,
-      wallet,
-      accountAddress: account.address,
-    };
-  }
 }
