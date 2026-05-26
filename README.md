@@ -25,9 +25,9 @@ npm: [@andrewkimjoseph/celina](https://www.npmjs.com/package/@andrewkimjoseph/ce
 
 ## Quick start
 
-Celina is not meant to be run manually in a terminal for normal use. Your MCP client (Cursor, Claude Desktop, LM Studio, etc.) spawns it as a child process and talks to it over stdio. Install the package, then add it to your MCP config (see [Cursor / Claude Desktop config](#cursor--claude-desktop-config)).
+Celina is not meant to be run manually in a terminal for normal use. Your MCP client (Cursor, Claude Desktop, LM Studio, etc.) spawns it as a child process and talks to it over stdio.
 
-**From npm:**
+**Recommended:** install from npm, then add Celina to your MCP config (see [MCP setup](#mcp-setup)).
 
 ```bash
 npm i @andrewkimjoseph/celina
@@ -41,30 +41,39 @@ npm run build
 npm start
 ```
 
-## Deploy to Render
+## MCP setup
 
-This project includes a [Render Blueprint](render.yaml) for one-click deployment as a public Streamable HTTP MCP server.
+Pick your client, install the package, paste the config, restart. Celina shows up as MCP tools your LLM can call.
 
-### 1. Generate an RSA key pair
+### Local stdio (recommended)
 
-```bash
-openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
-openssl rsa -pubout -in private.pem -out public.pem
+Install the package, then point your MCP client at the built entry. Works in any stdio client (Cursor, Claude Desktop, LM Studio, Continue, MCP Inspector). Requires Node.js ≥ 20.
+
+1. Run `npm i @andrewkimjoseph/celina`
+2. Open your MCP config (e.g. `claude_desktop_config.json`, Cursor **Settings → MCP**) and merge the snippet below into `mcpServers`
+3. Replace the path with your absolute path to `node_modules/@andrewkimjoseph/celina/build/index.js`, then restart the client
+
+```json
+{
+  "mcpServers": {
+    "celina": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/absolute/path/to/node_modules/@andrewkimjoseph/celina/build/index.js"],
+      "env": {
+        "CELO_PRIVATE_KEY": "0x...",
+        "SELF_AGENT_PRIVATE_KEY": "0x..."
+      }
+    }
+  }
+}
 ```
 
-### 2. Deploy
+Keep `CELO_PRIVATE_KEY` and `SELF_AGENT_PRIVATE_KEY` out of source control — they stay on your machine. Omit both for read-only chain queries.
 
-1. Push this repo to GitHub
-2. Render Dashboard → **New → Blueprint** → connect the repo
-3. Set `WALLET_ENCRYPTION_PRIVATE_KEY` in the Render Environment tab (paste contents of `private.pem`)
-4. (Optional) Add a custom domain in Render and set `ALLOWED_HOSTS` to that hostname (comma-separated if multiple)
-5. Your MCP endpoint will be at your Render URL + `/mcp`
+### Cursor — remote (streamable HTTP)
 
-> **Note:** Free Render services spin down after ~15 minutes of inactivity. Cold starts can take 30–60 seconds and may cause MCP client timeouts. Use a Starter plan for always-on hosting.
-
-## Cursor / Claude Desktop config
-
-### Cursor — remote (recommended)
+No local install — paste and go. Write tools use the [hosted encryption flow](#write-tools-hosted-mode) (no plaintext keys in config).
 
 ```json
 {
@@ -102,43 +111,46 @@ Fully quit and relaunch Claude Desktop after editing the config (closing the win
 
 > **Pro / Max / Team / Enterprise:** you can skip `mcp-remote` and add `https://mcp.celina.andrewkimjoseph.com/mcp` under **Settings → Integrations** instead.
 
-### Local stdio (npm)
-
-After `npm i @andrewkimjoseph/celina`, point your MCP client at the installed entry file (use an absolute path):
-
-```json
-{
-  "mcpServers": {
-    "celina": {
-      "command": "node",
-      "args": ["/absolute/path/to/node_modules/@andrewkimjoseph/celina/build/index.js"]
-    }
-  }
-}
-```
-
 ### Local stdio (from source)
 
+For development from a cloned repo, point at your local `build/index.js`:
+
 ```json
 {
   "mcpServers": {
     "celina": {
+      "type": "stdio",
       "command": "node",
-      "args": ["/absolute/path/to/celina/build/index.js"]
+      "args": ["/absolute/path/to/celina/build/index.js"],
+      "env": {
+        "CELO_PRIVATE_KEY": "0x...",
+        "SELF_AGENT_PRIVATE_KEY": "0x..."
+      }
     }
   }
 }
 ```
 
-For local write tools, add a funded mainnet wallet:
+## Deploy to Render
 
-```json
-"env": {
-  "CELO_PRIVATE_KEY": "0x..."
-}
+This project includes a [Render Blueprint](render.yaml) for one-click deployment as a public Streamable HTTP MCP server.
+
+### 1. Generate an RSA key pair
+
+```bash
+openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -pubout -in private.pem -out public.pem
 ```
 
-Never commit private keys. Use env vars only.
+### 2. Deploy
+
+1. Push this repo to GitHub
+2. Render Dashboard → **New → Blueprint** → connect the repo
+3. Set `WALLET_ENCRYPTION_PRIVATE_KEY` in the Render Environment tab (paste contents of `private.pem`)
+4. (Optional) Add a custom domain in Render and set `ALLOWED_HOSTS` to that hostname (comma-separated if multiple)
+5. Your MCP endpoint will be at your Render URL + `/mcp`
+
+> **Note:** Free Render services spin down after ~15 minutes of inactivity. Cold starts can take 30–60 seconds and may cause MCP client timeouts. Use a Starter plan for always-on hosting.
 
 ## Local LLM integration
 
@@ -148,10 +160,10 @@ Read-only tools (balances, blocks, GoodDollar status, etc.) work out of the box.
 
 ### LM Studio (0.3.17+)
 
-LM Studio can host MCP servers directly via `mcp.json` (same format as Cursor).
+LM Studio can host MCP servers directly via `mcp.json`. After `npm i @andrewkimjoseph/celina`:
 
 1. Open LM Studio → **Program** → **Install** → **Edit mcp.json**
-2. Add Celina under `mcpServers`
+2. Add Celina under `mcpServers` (same JSON as [Local stdio (recommended)](#local-stdio-recommended))
 3. In **Server Settings**, enable **Allow calling servers from mcp.json**
 4. Chat with a tool-capable model (e.g. Qwen 2.5, Llama 3.1+)
 
@@ -159,17 +171,19 @@ LM Studio can host MCP servers directly via `mcp.json` (same format as Cursor).
 {
   "mcpServers": {
     "celina": {
+      "type": "stdio",
       "command": "node",
       "args": ["/absolute/path/to/node_modules/@andrewkimjoseph/celina/build/index.js"],
       "env": {
-        "CELO_PRIVATE_KEY": "0x..."
+        "CELO_PRIVATE_KEY": "0x...",
+        "SELF_AGENT_PRIVATE_KEY": "0x..."
       }
     }
   }
 }
 ```
 
-Omit `CELO_PRIVATE_KEY` if you only need read-only chain queries.
+Omit both env vars for read-only chain queries.
 
 ### Open WebUI + Ollama
 
@@ -198,7 +212,9 @@ For write tools over HTTP, set `WALLET_ENCRYPTION_PRIVATE_KEY` in `.env` (see [D
 
 [Continue](https://docs.continue.dev/customize/deep-dives/mcp) works with local models (Ollama, LM Studio, etc.) in **agent mode**.
 
-Create `.continue/mcpServers/celina.yaml` in your workspace:
+1. Run `npm i @andrewkimjoseph/celina`
+2. Create `.continue/mcpServers/celina.yaml` in your workspace
+3. Switch Continue to agent mode and prompt
 
 ```yaml
 name: Celina
@@ -207,14 +223,13 @@ schema: v1
 mcpServers:
   - name: celina
     type: stdio
-    command: node
+    command: npx
     args:
-      - "/absolute/path/to/node_modules/@andrewkimjoseph/celina/build/index.js"
-    env:
-      CELO_PRIVATE_KEY: "0x..."
+      - "-y"
+      - "@andrewkimjoseph/celina"
 ```
 
-Alternatively, copy the [local stdio JSON](#local-stdio-npm) from the Cursor section into `.continue/mcpServers/mcp.json` — Continue picks up Claude/Cursor-style configs automatically.
+Alternatively, copy the [local stdio JSON](#local-stdio-recommended) into `.continue/mcpServers/mcp.json` — Continue picks up Claude/Cursor-style configs automatically.
 
 ### Test without an LLM
 
