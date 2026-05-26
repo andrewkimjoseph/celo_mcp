@@ -24,10 +24,12 @@ npm: [@andrewkimjoseph/celina](https://www.npmjs.com/package/@andrewkimjoseph/ce
 
 ## Quick start
 
-**From npm** (stdio MCP server):
+Celina is not meant to be run manually in a terminal for normal use. Your MCP client (Cursor, Claude Desktop, LM Studio, etc.) spawns it as a child process and talks to it over stdio. Install the package, then add it to your MCP config (see [Cursor / Claude Desktop config](#cursor--claude-desktop-config)).
+
+**From npm:**
 
 ```bash
-npx @andrewkimjoseph/celina
+npm i @andrewkimjoseph/celina
 ```
 
 **From source** (development):
@@ -78,16 +80,14 @@ openssl rsa -pubout -in private.pem -out public.pem
 
 ### Claude Desktop — remote (free plan)
 
-Claude Desktop's `claude_desktop_config.json` only supports local stdio servers — it does **not** accept `"type": "streamable-http"` with a `"url"`. Free-plan users should bridge the hosted server with [`mcp-remote`](https://github.com/geelen/mcp-remote):
+Claude Desktop's `claude_desktop_config.json` only supports local stdio servers — it does **not** accept `"type": "streamable-http"` with a `"url"`. Free-plan users should bridge the hosted server with [`mcp-remote`](https://github.com/geelen/mcp-remote). Install it once (`npm i -g mcp-remote`), then:
 
 ```json
 {
   "mcpServers": {
     "celina": {
-      "command": "npx",
+      "command": "mcp-remote",
       "args": [
-        "-y",
-        "mcp-remote",
         "https://mcp.celina.andrewkimjoseph.com/mcp",
         "--transport",
         "http-only"
@@ -103,12 +103,14 @@ Fully quit and relaunch Claude Desktop after editing the config (closing the win
 
 ### Local stdio (npm)
 
+After `npm i @andrewkimjoseph/celina`, point your MCP client at the installed entry file (use an absolute path):
+
 ```json
 {
   "mcpServers": {
     "celina": {
-      "command": "npx",
-      "args": ["-y", "@andrewkimjoseph/celina"]
+      "command": "node",
+      "args": ["/absolute/path/to/node_modules/@andrewkimjoseph/celina/build/index.js"]
     }
   }
 }
@@ -156,8 +158,8 @@ LM Studio can host MCP servers directly via `mcp.json` (same format as Cursor).
 {
   "mcpServers": {
     "celina": {
-      "command": "npx",
-      "args": ["-y", "@andrewkimjoseph/celina"],
+      "command": "node",
+      "args": ["/absolute/path/to/node_modules/@andrewkimjoseph/celina/build/index.js"],
       "env": {
         "CELO_PRIVATE_KEY": "0x..."
       }
@@ -204,10 +206,9 @@ schema: v1
 mcpServers:
   - name: celina
     type: stdio
-    command: npx
+    command: node
     args:
-      - "-y"
-      - "@andrewkimjoseph/celina"
+      - "/absolute/path/to/node_modules/@andrewkimjoseph/celina/build/index.js"
     env:
       CELO_PRIVATE_KEY: "0x..."
 ```
