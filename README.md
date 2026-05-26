@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/andrewkimjoseph/celina/main/assets/logo.png" alt="Celina logo — yellow C with profile silhouette on black" width="160" />
+  <img src="https://raw.githubusercontent.com/andrewkimjoseph/celina/main/assets/logo-yellow.png#gh-dark-mode-only" alt="Celina logo — yellow C with profile silhouette on black" width="160" />
+  <img src="https://raw.githubusercontent.com/andrewkimjoseph/celina/main/assets/logo-black.png#gh-light-mode-only" alt="Celina logo — black C with profile silhouette" width="160" />
 </p>
 
 <h1 align="center">Celina — Celo MCP Server</h1>
