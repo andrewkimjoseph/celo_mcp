@@ -1,0 +1,16 @@
+{
+  "name": "@andrewkimjoseph/celina",
+  "version": "0.4.1",
+  "description": "Deprecated — use @andrewkimjoseph/celina-mcp",
+  "type": "module",
+  "bin": {
+    "celina": "bin/wrapper.js",
+    "celina-mcp": "bin/wrapper.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@andrewkimjoseph/celina-mcp": "^0.5.0"
+  }
+}
