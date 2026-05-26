@@ -124,10 +124,10 @@ Native MCP hosting via `mcp.json`.
 ```json
 {
   "mcpServers": {
-    "celina": {
+    "celina-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@andrewkimjoseph/celina"],
+      "args": ["-y", "@andrewkimjoseph/celina-mcp"],
       "env": {
         "CELO_PRIVATE_KEY": "0x...",
         "SELF_AGENT_PRIVATE_KEY": "0x..."
