@@ -8,13 +8,6 @@ import { err, ok } from "./helpers.js";
 
 const SELF_DEMO_VERIFY_URL = selfDemoUrl("/api/demo/verify");
 
-const encryptedSelfAgentPrivateKeySchema = z
-  .string()
-  .optional()
-  .describe(
-    "Optional RSA-OAEP encrypted Self agent private key (base64) for self-hosted HTTP mode. Prefer SELF_AGENT_PRIVATE_KEY in MCP env.",
-  );
-
 const selfRegistrationModeSchema = z
   .enum([
     "linked",
@@ -188,17 +181,13 @@ export const selfTools: ToolModule = {
       {
         title: "Get Self Agent Identity",
         description:
-          "Return the configured Self agent's on-chain identity, credentials summary, and proof expiry. Requires SELF_AGENT_PRIVATE_KEY or encryptedSelfAgentPrivateKey.",
-        inputSchema: z.object({
-          encryptedSelfAgentPrivateKey: encryptedSelfAgentPrivateKeySchema,
-        }),
+          "Return the configured Self agent's on-chain identity, credentials summary, and proof expiry. Requires SELF_AGENT_PRIVATE_KEY in MCP server env.",
+        inputSchema: z.object({}),
         annotations: { readOnlyHint: true, idempotentHint: true },
       },
-      async ({ encryptedSelfAgentPrivateKey }) => {
+      async () => {
         try {
-          return ok(
-            await ctx.self.getIdentity({ encryptedSelfAgentPrivateKey }),
-          );
+          return ok(await ctx.self.getIdentity());
         } catch (error) {
           return err(error instanceof Error ? error.message : String(error));
         }
@@ -213,16 +202,14 @@ export const selfTools: ToolModule = {
           "Start a human proof refresh after on-chain proof expiry (isProofFresh is false). Returns an error while the proof is still fresh. Poll completion with check_self_registration. Self SDK also supports deregister_self_agent then register_self_agent.",
         inputSchema: z.object({
           agent_id: z.number().int().positive().optional(),
-          encryptedSelfAgentPrivateKey: encryptedSelfAgentPrivateKeySchema,
         }),
         annotations: { openWorldHint: true },
       },
-      async ({ agent_id, encryptedSelfAgentPrivateKey }) => {
+      async ({ agent_id }) => {
         try {
           return ok(
             await ctx.self.refreshProof({
               agentId: agent_id,
-              encryptedSelfAgentPrivateKey,
             }),
           );
         } catch (error) {
@@ -236,20 +223,16 @@ export const selfTools: ToolModule = {
       {
         title: "Deregister Self Agent",
         description:
-          "Start irreversible Self agent deregistration. Human must confirm via Self app QR. Poll with check_self_registration.",
-        inputSchema: z.object({
-          encryptedSelfAgentPrivateKey: encryptedSelfAgentPrivateKeySchema,
-        }),
+          "Start irreversible Self agent deregistration. Human must confirm via Self app QR. Poll with check_self_registration. Requires SELF_AGENT_PRIVATE_KEY in MCP server env.",
+        inputSchema: z.object({}),
         annotations: {
           destructiveHint: true,
           openWorldHint: true,
         },
       },
-      async ({ encryptedSelfAgentPrivateKey }) => {
+      async () => {
         try {
-          return ok(
-            await ctx.self.deregisterAgent({ encryptedSelfAgentPrivateKey }),
-          );
+          return ok(await ctx.self.deregisterAgent());
         } catch (error) {
           return err(error instanceof Error ? error.message : String(error));
         }
@@ -271,18 +254,16 @@ export const selfTools: ToolModule = {
               message: "Only http:// and https:// URLs are allowed",
             }),
           body: z.string().optional(),
-          encryptedSelfAgentPrivateKey: encryptedSelfAgentPrivateKeySchema,
         }),
         annotations: { readOnlyHint: true, idempotentHint: true },
       },
-      async ({ method, url, body, encryptedSelfAgentPrivateKey }) => {
+      async ({ method, url, body }) => {
         try {
           return ok(
             await ctx.self.signRequest({
               method,
               url,
               body,
-              encryptedSelfAgentPrivateKey,
             }),
           );
         } catch (error) {
@@ -307,11 +288,10 @@ export const selfTools: ToolModule = {
             }),
           body: z.string().optional(),
           content_type: z.string().optional().default("application/json"),
-          encryptedSelfAgentPrivateKey: encryptedSelfAgentPrivateKeySchema,
         }),
         annotations: { openWorldHint: true },
       },
-      async ({ method, url, body, content_type, encryptedSelfAgentPrivateKey }) => {
+      async ({ method, url, body, content_type }) => {
         try {
           return ok(
             await ctx.self.authenticatedFetch({
@@ -319,7 +299,6 @@ export const selfTools: ToolModule = {
               url,
               body,
               contentType: content_type,
-              encryptedSelfAgentPrivateKey,
             }),
           );
         } catch (error) {

@@ -33,7 +33,6 @@ import {
   selfDemoUrl,
 } from "../config/self.js";
 import { CELINA_DATA_SUFFIX } from "../config/celina-tag.js";
-import { decryptPrivateKey } from "../crypto/wallet-key-crypto.js";
 import {
   deleteSelfSession,
   getSelfSession,
@@ -46,10 +45,6 @@ import {
   truncateBody,
 } from "../utils/self-format.js";
 import { computeSigningMessage } from "../utils/self-signing.js";
-
-export interface SelfAgentKeyParams {
-  encryptedSelfAgentPrivateKey?: string;
-}
 
 export interface VerifySelfAgentParams {
   agentAddress: `0x${string}`;
@@ -99,19 +94,13 @@ export class SelfService {
     private readonly envSelfAgentPrivateKey?: `0x${string}`,
   ) {}
 
-  private resolveAgentPrivateKey(
-    params?: SelfAgentKeyParams,
-  ): `0x${string}` {
-    if (params?.encryptedSelfAgentPrivateKey) {
-      return decryptPrivateKey(params.encryptedSelfAgentPrivateKey);
-    }
-
+  private resolveAgentPrivateKey(): `0x${string}` {
     if (this.envSelfAgentPrivateKey) {
       return this.envSelfAgentPrivateKey;
     }
 
     throw new Error(
-      "No Self agent key configured. Set SELF_AGENT_PRIVATE_KEY or pass encryptedSelfAgentPrivateKey.",
+      "No Self agent key configured. Set SELF_AGENT_PRIVATE_KEY in the MCP server env.",
     );
   }
 
@@ -652,8 +641,8 @@ export class SelfService {
     };
   }
 
-  async getIdentity(params?: SelfAgentKeyParams) {
-    const privateKey = this.resolveAgentPrivateKey(params);
+  async getIdentity() {
+    const privateKey = this.resolveAgentPrivateKey();
     const info = await this.getAgentInfoFromKey(privateKey);
 
     if (!info.registered) {
@@ -795,11 +784,11 @@ export class SelfService {
     }
   }
 
-  async refreshProof(params: SelfAgentKeyParams & { agentId?: number }) {
+  async refreshProof(params: { agentId?: number } = {}) {
     let agentId = params.agentId;
 
     if (agentId == null) {
-      const privateKey = this.resolveAgentPrivateKey(params);
+      const privateKey = this.resolveAgentPrivateKey();
       const info = await this.getAgentInfoFromKey(privateKey);
       if (!info.registered) {
         throw new Error(
@@ -831,8 +820,8 @@ export class SelfService {
     };
   }
 
-  async deregisterAgent(params?: SelfAgentKeyParams) {
-    const privateKey = this.resolveAgentPrivateKey(params);
+  async deregisterAgent() {
+    const privateKey = this.resolveAgentPrivateKey();
     const account = privateKeyToAccount(privateKey);
 
     const session = await requestDeregistration({
@@ -858,14 +847,12 @@ export class SelfService {
     };
   }
 
-  async signRequest(
-    params: SelfAgentKeyParams & {
-      method: string;
-      url: string;
-      body?: string;
-    },
-  ) {
-    const privateKey = this.resolveAgentPrivateKey(params);
+  async signRequest(params: {
+    method: string;
+    url: string;
+    body?: string;
+  }) {
+    const privateKey = this.resolveAgentPrivateKey();
     const account = privateKeyToAccount(privateKey);
     const timestamp = Date.now().toString();
     const message = computeSigningMessage(
@@ -889,15 +876,13 @@ export class SelfService {
     };
   }
 
-  async authenticatedFetch(
-    params: SelfAgentKeyParams & {
-      method: string;
-      url: string;
-      body?: string;
-      contentType?: string;
-    },
-  ) {
-    const privateKey = this.resolveAgentPrivateKey(params);
+  async authenticatedFetch(params: {
+    method: string;
+    url: string;
+    body?: string;
+    contentType?: string;
+  }) {
+    const privateKey = this.resolveAgentPrivateKey();
     const account = privateKeyToAccount(privateKey);
     const method = params.method.toUpperCase();
     const body = params.body;
