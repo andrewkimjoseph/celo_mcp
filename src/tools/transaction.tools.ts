@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { AppContext } from "../context/app-context.js";
 import type { ToolModule } from "./types.js";
-import { addressOrEnsSchema, tokenSymbolSchema } from "../schemas/common.js";
+import { addressOrEnsSchema, addressSchema, tokenSymbolSchema } from "../schemas/common.js";
 import { err, ok } from "./helpers.js";
 
 export const transactionTools: ToolModule = {
@@ -52,6 +52,57 @@ export const transactionTools: ToolModule = {
           const { address, ens } = await ctx.ens.resolveAddressOrEns(to);
           const result = await ctx.transaction.sendToken(address, token, amount);
           return ok(ens ? { ...result, ens } : result);
+        } catch (error) {
+          return err(error instanceof Error ? error.message : String(error));
+        }
+      },
+    );
+
+    server.registerTool(
+      "get_gas_fee_data",
+      {
+        title: "Get Gas Fee Data",
+        description: "Returns current gas fee data including EIP-1559 fees on mainnet.",
+        inputSchema: z.object({}),
+        annotations: { readOnlyHint: true, idempotentHint: true },
+      },
+      async () => {
+        try {
+          return ok(await ctx.sdkTransaction.getGasFeeData());
+        } catch (error) {
+          return err(error instanceof Error ? error.message : String(error));
+        }
+      },
+    );
+
+    server.registerTool(
+      "estimate_transaction",
+      {
+        title: "Estimate Transaction",
+        description:
+          "Estimates gas for a generic transaction (to/value/data). Distinct from estimate_send for token transfers.",
+        inputSchema: z.object({
+          from: addressSchema,
+          to: addressSchema,
+          value: z.string().optional().describe("Value in wei (decimal string)"),
+          data: z
+            .string()
+            .regex(/^0x[a-fA-F0-9]*$/)
+            .optional()
+            .describe("Optional calldata hex"),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async ({ from, to, value, data }) => {
+        try {
+          return ok(
+            await ctx.sdkTransaction.estimateTransaction({
+              from: from as `0x${string}`,
+              to: to as `0x${string}`,
+              value,
+              data: data as `0x${string}` | undefined,
+            }),
+          );
         } catch (error) {
           return err(error instanceof Error ? error.message : String(error));
         }
