@@ -11,6 +11,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@andrewkimjoseph/celina-mcp": "^0.6.0"
+    "@andrewkimjoseph/celina-mcp": "file:.."
   }
 }
