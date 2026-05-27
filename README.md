@@ -277,6 +277,50 @@ export const myFeatureTools: ToolModule = {
 
 No changes to `src/index.ts` or server bootstrap required.
 
+## For developers
+
+### Architecture split
+
+Read-only chain logic comes from [`@andrewkimjoseph/celina-sdk`](https://www.npmjs.com/package/@andrewkimjoseph/celina-sdk) via [`src/context/app-context.ts`](src/context/app-context.ts). Write paths use local wallet-backed services that sign with `CELO_PRIVATE_KEY`:
+
+| Layer | Source | Examples |
+|-------|--------|----------|
+| Reads | celina-sdk | balances, blocks, FX quotes, GoodDollar status, ENS |
+| Writes | Local services | `send_token`, `execute_mento_fx`, `supply_aave`, `withdraw_aave` |
+| Self Agent ID | Local `SelfService` | registration, proof refresh, authenticated fetch (`SELF_AGENT_PRIVATE_KEY`) |
+
+Self Agent ID is **not** in celina-sdk. For frontend Self flows use [`@selfxyz/agent-sdk`](https://www.npmjs.com/package/@selfxyz/agent-sdk).
+
+### Directory map
+
+| Path | Purpose |
+|------|---------|
+| `src/index.ts` | stdio MCP bootstrap — loads env, connects transport |
+| `src/server/` | `createServer()` factory and LLM instructions |
+| `src/context/` | Composes SDK read services + wallet-backed write services |
+| `src/tools/` | One file per domain; all registered in `src/tools/index.ts` |
+| `src/services/` | Execute/sign implementations (not exported by SDK) |
+| `src/config/` | Env, token registry, Self/Aave constants |
+
+### Tool module pattern
+
+Each tool file exports a `ToolModule` with `register(server, ctx)`. See [Adding a new tool](#adding-a-new-tool) above — append new modules to `toolModules` in `src/tools/index.ts`.
+
+### Local development
+
+```bash
+npm run dev          # watch TypeScript → build/
+npm run inspect      # MCP Inspector UI over stdio
+```
+
+Point your MCP client at the built entry for source development:
+
+```json
+"args": ["/absolute/path/to/celina-mcp/build/index.js"]
+```
+
+Copy `.env.example` to `.env` for `CELO_PRIVATE_KEY`, `SELF_AGENT_PRIVATE_KEY`, and RPC overrides.
+
 ## Roadmap
 
 - [x] Mento FX routing (`get_mento_fx_quote`, `estimate_mento_fx`, `execute_mento_fx`)
