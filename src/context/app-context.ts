@@ -13,6 +13,26 @@ import { AaveService } from "../services/aave.service.js";
 import { SelfService } from "../services/self.service.js";
 import type { AppConfig } from "../config/env.js";
 
+function assertSdkServices(
+  sdk: ReturnType<typeof createCelinaClient>,
+): void {
+  const required = [
+    "governance",
+    "staking",
+    "nft",
+    "contract",
+  ] as const;
+
+  for (const key of required) {
+    if (!sdk[key]) {
+      throw new Error(
+        `Missing celina-sdk service "${key}". Install @andrewkimjoseph/celina-sdk >= 0.2.0, ` +
+          "run npm install in celina-mcp, rebuild, and restart the MCP server.",
+      );
+    }
+  }
+}
+
 export interface AppContext {
   /** Whether `CELO_PRIVATE_KEY` is configured for server-side signing. */
   config: {
@@ -24,11 +44,17 @@ export interface AppContext {
   blockchain: ReturnType<typeof createCelinaClient>["blockchain"];
   account: ReturnType<typeof createCelinaClient>["account"];
   token: ReturnType<typeof createCelinaClient>["token"];
+  /** SDK transaction reads (gas fees, generic estimates). */
+  sdkTransaction: ReturnType<typeof createCelinaClient>["transaction"];
   /** Local service — signs sends with `CELO_PRIVATE_KEY`. */
   transaction: TransactionService;
   mentoFx: MentoFxService;
   aave: AaveService;
   gooddollar: ReturnType<typeof createCelinaClient>["gooddollar"];
+  governance: ReturnType<typeof createCelinaClient>["governance"];
+  staking: ReturnType<typeof createCelinaClient>["staking"];
+  nft: ReturnType<typeof createCelinaClient>["nft"];
+  contract: ReturnType<typeof createCelinaClient>["contract"];
   /** Self Agent ID — requires `SELF_AGENT_PRIVATE_KEY`. */
   self: SelfService;
   ens: ReturnType<typeof createCelinaClient>["ens"];
@@ -49,6 +75,8 @@ export function createAppContext(
     ethRpcUrl: config.ethRpcUrl,
   });
 
+  assertSdkServices(sdk);
+
   return {
     config: {
       hasWallet: Boolean(walletAddress),
@@ -58,10 +86,15 @@ export function createAppContext(
     blockchain: sdk.blockchain,
     account: sdk.account,
     token: sdk.token,
+    sdkTransaction: sdk.transaction,
     transaction: new TransactionService(clientFactory),
     mentoFx: new MentoFxService(clientFactory),
     aave: new AaveService(clientFactory),
     gooddollar: sdk.gooddollar,
+    governance: sdk.governance,
+    staking: sdk.staking,
+    nft: sdk.nft,
+    contract: sdk.contract,
     self: new SelfService(clientFactory, selfAgentPrivateKey),
     ens: sdk.ens,
   };

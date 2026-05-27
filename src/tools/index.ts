@@ -3,8 +3,12 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { AppContext } from "../context/app-context.js";
 import type { ToolModule } from "./types.js";
 import { accountTools, blockchainTools } from "./blockchain.tools.js";
+import { contractTools } from "./contract.tools.js";
 import { gooddollarTools } from "./gooddollar.tools.js";
+import { governanceTools } from "./governance.tools.js";
+import { nftTools } from "./nft.tools.js";
 import { selfTools } from "./self.tools.js";
+import { stakingTools } from "./staking.tools.js";
 import { tokenTools } from "./token.tools.js";
 import { transactionTools } from "./transaction.tools.js";
 import { mentoFxTools } from "./mento-fx.tools.js";
@@ -20,6 +24,10 @@ export const toolModules: ToolModule[] = [
   mentoFxTools,
   aaveTools,
   gooddollarTools,
+  governanceTools,
+  stakingTools,
+  nftTools,
+  contractTools,
   selfTools,
 ];
 
