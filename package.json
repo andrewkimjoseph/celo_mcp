@@ -1,6 +1,6 @@
 {
   "name": "@andrewkimjoseph/celina-mcp",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "description": "Celina — MCP server for Celo mainnet. Balances, transfers, Self Agent ID, and chain reads for LLM agents.",
   "type": "module",
   "main": "build/index.js",
@@ -63,7 +63,7 @@
   },
   "homepage": "https://github.com/andrewkimjoseph/celina-mcp#readme",
   "dependencies": {
-    "@andrewkimjoseph/celina-sdk": "^0.2.2",
+    "@andrewkimjoseph/celina-sdk": "^0.2.3",
     "@mento-protocol/mento-sdk": "^3.2.8",
     "@modelcontextprotocol/sdk": "^1.22.0",
     "@noble/ed25519": "^3.1.0",
