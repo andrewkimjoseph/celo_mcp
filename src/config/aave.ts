@@ -1,3 +1,4 @@
+import { isAddress } from "viem";
 import { findKnownToken } from "./chains.js";
 
 /** Aave V3 on Celo mainnet — from bgd-labs/aave-address-book AaveV3Celo */
@@ -55,14 +56,32 @@ export const AAVE_SUPPORTED_SYMBOLS = [
 export function resolveAaveAsset(token: string): AaveAsset {
   const normalized = token.trim();
   const known = findKnownToken(normalized);
-  const symbol = known?.symbol ?? normalized.toUpperCase();
 
-  const asset = AAVE_ASSETS[symbol];
-  if (!asset) {
-    throw new Error(
-      `Token "${token}" is not supported on Aave V3 Celo. Supported: ${AAVE_SUPPORTED_SYMBOLS.join(", ")}.`,
-    );
+  if (known) {
+    const byKnownSymbol = AAVE_ASSETS[known.symbol];
+    if (byKnownSymbol) {
+      return byKnownSymbol;
+    }
   }
 
-  return asset;
+  if (isAddress(normalized)) {
+    const lower = normalized.toLowerCase();
+    const byAddress = Object.values(AAVE_ASSETS).find(
+      (asset) => asset.underlying.toLowerCase() === lower,
+    );
+    if (byAddress) {
+      return byAddress;
+    }
+  }
+
+  const bySymbol = Object.values(AAVE_ASSETS).find(
+    (asset) => asset.symbol.toLowerCase() === normalized.toLowerCase(),
+  );
+  if (bySymbol) {
+    return bySymbol;
+  }
+
+  throw new Error(
+    `Token "${token}" is not supported on Aave V3 Celo. Supported: ${AAVE_SUPPORTED_SYMBOLS.join(", ")}.`,
+  );
 }

@@ -132,7 +132,7 @@ export const KNOWN_TOKENS: KnownToken[] = [
   },
   {
     symbol: "USDT",
-    address: "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
+    address: "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
     issuer: "Tether",
     useCase: "Popular stablecoin on multiple blockchains",
     decimals: 6,
@@ -257,11 +257,13 @@ function tokenMatchesInput(token: KnownToken, normalized: string, upper: string)
 export function findKnownToken(token: string): KnownToken | undefined {
   const normalized = token.trim();
   const upper = normalized.toUpperCase();
+  const lower = normalized.toLowerCase();
 
   return KNOWN_TOKENS.find(
     (entry) =>
       tokenMatchesInput(entry, normalized, upper) ||
-      (upper === "NATIVE" && entry.address === "native"),
+      (upper === "NATIVE" && entry.address === "native") ||
+      (entry.address !== "native" && entry.address.toLowerCase() === lower),
   );
 }
 
