@@ -1,3 +1,5 @@
+/// <reference types="vitest/config" />
+
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -7,5 +9,10 @@ export default defineConfig({
     hookTimeout: 90_000,
     include: ["tests/**/*.test.ts"],
     exclude: ["tests/unit/**"],
+    server: {
+      deps: {
+        inline: ["@andrewkimjoseph/celina-sdk"],
+      },
+    },
   },
 });

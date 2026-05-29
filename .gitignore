@@ -7,6 +7,7 @@ wrapper/node_modules/
 .env.*
 !.env.example
 *.log
+*.tsbuildinfo
 .DS_Store
 private.pem
 public.pem
