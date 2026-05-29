@@ -12,6 +12,7 @@ import { stakingTools } from "./staking.tools.js";
 import { tokenTools } from "./token.tools.js";
 import { transactionTools } from "./transaction.tools.js";
 import { mentoFxTools } from "./mento-fx.tools.js";
+import { uniswapTools } from "./uniswap.tools.js";
 import { aaveTools } from "./aave.tools.js";
 import { ensTools } from "./ens.tools.js";
 
@@ -22,6 +23,7 @@ export const toolModules: ToolModule[] = [
   tokenTools,
   transactionTools,
   mentoFxTools,
+  uniswapTools,
   aaveTools,
   gooddollarTools,
   governanceTools,

@@ -6,6 +6,7 @@ Guidelines:
 - send_token and estimate_send accept ENS names (e.g. andrewkimjoseph.celo.eth) directly; use resolve_ens for standalone lookups.
 - Always call estimate_send before send_token when possible.
 - For Mento FX conversions, call get_mento_fx_quote and estimate_mento_fx before execute_mento_fx.
+- For Uniswap v4 swaps, call get_uniswap_quote and estimate_uniswap_swap before execute_uniswap_swap.
 - Write tools require CELO_PRIVATE_KEY in the server environment.
 - Known tokens are defined in a single registry: CELO (native), mainnet stablecoins (USDm, EURm, USDC, USDT, etc.), and GoodDollar.
 - Use get_stablecoin_balances to scan all stablecoins at once; use get_celo_balances with a tokens list for specific symbols.
@@ -17,6 +18,7 @@ Guidelines:
 - NFT tools (get_nft_info, get_nft_balance) support ERC-721 and ERC-1155.
 - Use get_gooddollar_whitelisting_info to check GoodDollar IdentityV4 whitelist status, whitelisting date, and reverification progress for a wallet.
 - Mento FX tools (get_mento_fx_quote, estimate_mento_fx, execute_mento_fx) convert between Mento oracle-priced tokens (USDm, EURm, CELO, etc.). They are unavailable when the Mento FX market is closed.
+- Uniswap v4 tools (get_uniswap_quote, estimate_uniswap_swap, execute_uniswap_swap) swap via Uniswap AMM pools on Celo (Universal Router + Permit2). CELO routes through WCELO pools; the signer needs WCELO (wrapped CELO) balance for CELO-denominated swaps. All on-chain steps include the CELINA attribution tag.
 - Aave tools (supply_aave, withdraw_aave) supply and withdraw tokens on Aave V3 Celo. Supported: USDT, WETH, USDm, USDC, CELO, EURm. Use get_celo_balances with the target token before supplying; CELO requires wrapped CELO (ERC-20), not native CELO; use withdrawMax on withdraw to redeem the full supplied balance.
 - Self Agent ID tools (ai.self.xyz on Celo mainnet):
   - Read: verify_self_agent, lookup_self_agent, verify_self_request, get_self_identity

@@ -9,6 +9,7 @@ import { createCelinaClient } from "@andrewkimjoseph/celina-sdk";
 import type { CeloClientFactory } from "../clients/celo-client.js";
 import { TransactionService } from "../services/transaction.service.js";
 import { MentoFxService } from "../services/mento-fx.service.js";
+import { UniswapService } from "../services/uniswap.service.js";
 import { AaveService } from "../services/aave.service.js";
 import { SelfService } from "../services/self.service.js";
 import type { AppConfig } from "../config/env.js";
@@ -21,6 +22,7 @@ function assertSdkServices(
     "staking",
     "nft",
     "contract",
+    "uniswap",
   ] as const;
 
   for (const key of required) {
@@ -49,6 +51,7 @@ export interface AppContext {
   /** Local service — signs sends with `CELO_PRIVATE_KEY`. */
   transaction: TransactionService;
   mentoFx: MentoFxService;
+  uniswap: UniswapService;
   aave: AaveService;
   gooddollar: ReturnType<typeof createCelinaClient>["gooddollar"];
   governance: ReturnType<typeof createCelinaClient>["governance"];
@@ -89,6 +92,7 @@ export function createAppContext(
     sdkTransaction: sdk.transaction,
     transaction: new TransactionService(clientFactory),
     mentoFx: new MentoFxService(clientFactory),
+    uniswap: new UniswapService(clientFactory, sdk),
     aave: new AaveService(clientFactory),
     gooddollar: sdk.gooddollar,
     governance: sdk.governance,
