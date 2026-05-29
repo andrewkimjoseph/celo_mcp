@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { AppContext } from "../context/app-context.js";
-import { AAVE_SUPPORTED_SYMBOLS } from "../config/aave.js";
+import { AAVE_SUPPORTED_SYMBOLS } from "@andrewkimjoseph/celina-sdk";
 import { tokenSymbolSchema } from "../schemas/common.js";
 import type { ToolModule } from "./types.js";
 import { err, ok } from "./helpers.js";
