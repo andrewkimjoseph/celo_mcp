@@ -1,6 +1,6 @@
 {
   "name": "@andrewkimjoseph/celina",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Deprecated — use @andrewkimjoseph/celina-mcp",
   "type": "module",
   "bin": {
@@ -11,6 +11,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@andrewkimjoseph/celina-mcp": "^0.7.12"
+    "@andrewkimjoseph/celina-mcp": "^0.7.13"
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "@andrewkimjoseph/celina-mcp",
-  "version": "0.7.12",
-  "description": "Celina \u2014 MCP server for Celo mainnet. Balances, transfers, Self Agent ID, and chain reads for LLM agents.",
+  "version": "0.7.13",
+  "description": "Celina — MCP server for Celo mainnet. Balances, transfers, Self Agent ID, and chain reads for LLM agents.",
   "type": "module",
   "main": "build/index.js",
   "exports": {
