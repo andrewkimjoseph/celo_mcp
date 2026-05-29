@@ -317,15 +317,24 @@ export class MentoFxService {
         ? await this.estimateCallGas(client, from, approval)
         : undefined;
 
-      const fxGas =
-        approvalParsed !== null
-          ? await this.estimateSwapGasWithAllowance(
-              client,
-              from,
-              swap.params,
-              approvalParsed,
-            )
-          : await this.estimateCallGas(client, from, swap.params);
+      let fxGas: string | undefined;
+      let swapGasEstimated = true;
+      try {
+        fxGas =
+          approvalParsed !== null
+            ? await this.estimateSwapGasWithAllowance(
+                client,
+                from,
+                swap.params,
+                approvalParsed,
+              )
+            : await this.estimateCallGas(client, from, swap.params);
+      } catch (error) {
+        if (approvalParsed === null) {
+          throw error;
+        }
+        swapGasEstimated = false;
+      }
 
       return {
         ...this.baseQuoteFields(
@@ -341,6 +350,7 @@ export class MentoFxService {
         approvalNeeded: approval !== null,
         approvalGas,
         fxGas,
+        swapGasEstimated,
         slippageTolerance,
         deadline: deadline.toString(),
         deadlineMinutes,

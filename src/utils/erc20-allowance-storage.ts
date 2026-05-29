@@ -26,6 +26,13 @@ const ALLOWANCE_MAPPING_SLOTS = [
   12n,
   13n,
   14n,
+  15n,
+  16n,
+  17n,
+  18n,
+  19n,
+  20n,
+  51n,
 ] as const;
 
 export function erc20AllowanceStorageSlot(
